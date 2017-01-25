@@ -1,6 +1,6 @@
 import os
 import re
-from converter import SGF2Json
+from .converter import SGF2Json
 import datetime
 
 
