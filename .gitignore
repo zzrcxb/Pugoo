@@ -87,3 +87,25 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Database
+*.sgf
+*.SGF
+*.bg
+*.BG
+Database/
+
+# Text file
+*.pdf
+*.docx
+*.doc
+*.txt
+
+# passwd
+config.py
+
+# Log
+Log/
+
+# pyhcarm
+.idea/
