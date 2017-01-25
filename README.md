@@ -1,0 +1,2 @@
+# pugo
+Go game program
