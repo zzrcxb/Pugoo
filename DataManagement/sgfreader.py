@@ -55,13 +55,19 @@ class SGF:
         labels = pattern.findall(self.sgf)
         for label in labels:
             self.labels[label[0]] = label[2]
-
+        self.labels['RU'] = self.get_ru(self.labels.get('RU', None))
+        self.labels['RE'] = self.get_re(self.labels.get('RE', None))
+        self.labels['KM'] = self.get_komi(self.labels.get('KM', None))
+        self.labels['SZ'] = self.get_sz(self.labels.get('SZ', None))
 
     def get_ru(self, rule):
         if self.rule:
             return self.rule
         elif not rule:
-            return None
+            if self.rule:
+                return self.rule
+            else:
+                raise FileLabelMissed()
         elif rule.lower() == 'chinese':
             return 'Chinese'
         elif rule.lower() == 'japanese':
@@ -75,7 +81,10 @@ class SGF:
         if self.komi:
             return self.komi
         elif not komi:
-            return None
+            if self.komi:
+                return self.komi
+            else:
+                raise FileLabelMissed()
         else:
             try:
                 return float(komi)
@@ -84,7 +93,7 @@ class SGF:
 
     def get_re(self, result):
         if not result:
-            return None
+            raise FileLabelMissed()
 
         try:
             winner = result.split('+')[0]
@@ -108,7 +117,10 @@ class SGF:
         if self.size:
             return self.size
         elif not size:
-            return None
+            if self.size:
+                return self.size
+            else:
+                raise FileLabelMissed()
         else:
             try:
                 return int(size)

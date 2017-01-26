@@ -1,5 +1,6 @@
 from config import *
 from os import sep
+from HashSys.hashsys import check_and_create
 
 if not RAW_DATA_PATH.endswith(sep):
     raw_path = RAW_DATA_PATH + sep
@@ -26,4 +27,6 @@ if not TMP_PATH.endswith(sep):
 else:
     tmp_path = TMP_PATH
 
-db_url = ''.join(['mysql+pymysql://', DB_USER, ':', DB_PASSWD , '@', DB_DOMAIN, ':', DB_PORT, '/', DB_NAME])
+db_url = ''.join(['mysql+pymysql://', DB_USER, ':', DB_PASSWD , '@', DB_DOMAIN, '/', DB_NAME])
+
+# check_and_create()

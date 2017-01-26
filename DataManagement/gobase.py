@@ -7,7 +7,7 @@ class GoBase(TableBase):
     __tablename__ = 'training'
     filehash = Column(String(44), primary_key=True)
     fileformat = Column(String(10), default=None)
-    filesource = Column(String(10), default=None)
+    filesource = Column(String(64), default=None)
     rawfilepath = Column(String(256), nullable=False)
 
     size = Column(Integer, nullable=False)

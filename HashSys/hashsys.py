@@ -21,6 +21,53 @@ def check_and_create():
     return flag
 
 
+def get_file_md5(file_path, buf_size=65536):
+    md5 = hashlib.md5()
+    # Get file hash
+    try:
+        with open(file_path, 'rb') as f:
+            while True:
+                data = f.read(buf_size)
+                if not data:
+                    break
+                md5.update(data)
+    except FileNotFoundError as e:
+        print(e)
+        return False
+    except IOError as e:
+        print(e)
+        return False
+    return md5.hexdigest()
+
+
+def move_file_by_hash(hash_code, file_path, debug=False):
+    global out_path
+    filename = file_path.split(os.sep)[-1]
+    if len(filename.split('.')) != 1:
+        extension = filename.split('.')[-1]
+    else:
+        extension = None
+
+    destination = out_path + os.sep + hash_code[0:2] + os.sep + hash_code[2:4] + os.sep + hash_code
+    if extension:
+        destination = destination + '.' + extension
+
+    if debug:
+        print(file_path, 'MD5:', hash_code)
+        print('Extension', extension)
+        print('Destination', destination)
+
+    try:
+        os.rename(file_path, destination)
+    except PermissionError as e:
+        print(e)
+        return False
+    except FileExistsError as e:
+        print(e)
+        return False
+    return destination
+
+
 def move_file_to_hash(file_path, buf_size=65536, debug=False):
     global out_path
     md5 = hashlib.md5()
@@ -61,7 +108,7 @@ def move_file_to_hash(file_path, buf_size=65536, debug=False):
     except PermissionError as e:
         print(e)
         return False
-    return True
+    return hash_code
 
 
 # Return path of file
