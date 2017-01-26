@@ -34,5 +34,6 @@ def SGF2Json(sgf, labels, filename):  # result > 0 black win result < 0, white w
         print(e, 'From converter')
         return False
 
-    go_base = GoBase(fileformat='bg', size=labels['SZ'], rule=labels['RU'], komi=labels['KM'], result=labels['RE'])
+    go_base = GoBase(fileformat='bg', size=labels['SZ'], rule=labels['RU'], komi=labels['KM'],
+                     result=labels['RE'], handicap=labels['HA'])
     return go_base

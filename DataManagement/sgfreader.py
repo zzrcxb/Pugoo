@@ -14,6 +14,7 @@ class SGF:
         self.komi = None
         self.rule = None
         self.size = None
+        self.handicap = None
 
     def load(self, file_path, buf_size=65536):
         try:
@@ -59,6 +60,7 @@ class SGF:
         self.labels['RE'] = self.get_re(self.labels.get('RE', None))
         self.labels['KM'] = self.get_komi(self.labels.get('KM', None))
         self.labels['SZ'] = self.get_sz(self.labels.get('SZ', None))
+        self.labels['HA'] = self.get_ha(self.labels.get('HA', None))
 
     def get_ru(self, rule):
         if self.rule:
@@ -126,3 +128,14 @@ class SGF:
                 return int(size)
             except ValueError:
                 raise FileSizeError()
+
+    def get_ha(self, handicap):
+        if self.handicap:
+            return self.handicap
+        elif not handicap:
+            return 0
+        else:
+            try:
+                return float(handicap)
+            except ValueError:
+                raise FileHandicapError()

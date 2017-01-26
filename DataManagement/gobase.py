@@ -14,6 +14,7 @@ class GoBase(TableBase):
     rule = Column(String(32), nullable=False)
     komi = Column(Float, nullable=False)
     result = Column(Float, nullable=False)
+    handicap = Column(Float, nullable=False)
 
     def __repr__(self):
         return '<GoBase(filehash = %s, fileformat = %s, filesource = %s, rawfilepath = %s, ' \

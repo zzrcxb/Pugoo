@@ -28,6 +28,7 @@ class Statistics:
         self.komi_err = 0
         self.res_err = 0
         self.step_err = 0
+        self.hand_err = 0
 
     def save_statistics(self, file_path):
         save_time = str(datetime.datetime.now()).replace(':', '_')
@@ -51,10 +52,11 @@ Content error: %d file(s)
      Result error: %d file(s)
      Label missed: %d file(s)
      Step error: %d file(s)
+     Handicap error: %d file(s)
 Decode error: %d file(s)
 Format error: %d file(s)
 """ % (self.total, self.valid, self.zh, self.jp, self.kr, self.ot, self.content_err, self.size_err, self.komi_err,
-       self.res_err, self.label_missed, self.step_err,  self.decode_err, self.format_err))
+       self.res_err, self.label_missed, self.step_err,  self.hand_err, self.decode_err, self.format_err))
                 f.write('\n')
                 f.write(save_time)
         except IOError as e:
@@ -89,6 +91,7 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None):
 
             # Read sgf file
             sgf = SGF()
+            sgf.rule = 'Chinese'
             try:
                 content = sgf.load(file_path)
             except FileDecodeError:
@@ -112,6 +115,9 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None):
                 continue
             except FileStepError:
                 ss.step_err += 1
+                continue
+            except FileHandicapError:
+                ss.hand_err += 1
                 continue
             except FileFormatError:
                 ss.format_err += 1

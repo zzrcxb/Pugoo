@@ -27,3 +27,6 @@ class FileLabelMissed(FileContentError):
 
 class FileStepError(FileContentError):
     pass
+
+class FileHandicapError(FileContentError):
+    pass
