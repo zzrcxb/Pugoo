@@ -18,33 +18,19 @@ class SGF:
 
     def load(self, file_path, buf_size=65536):
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, 'r') as f:
                 raw = f.read(buf_size)
                 while True:
                     data = f.read(buf_size)
                     if not data:
                         break
                     raw += data
-                self.sgf = raw.decode('utf-8')
+                self.sgf = raw
         except IOError as e:
             print(e)
             return None
         except UnicodeDecodeError:
-            self.utf_8 = False
-            try:
-                with open(file_path, 'rb') as f:
-                    raw = f.read(buf_size)
-                    while True:
-                        data = f.read(buf_size)
-                        if not data:
-                            break
-                        raw += data
-                    self.sgf = raw.decode('gb2312')
-            except IOError as e:
-                print(e)
-                return None
-            except UnicodeDecodeError:
-                raise FileDecodeError()  # Annoying decode problem
+            raise FileDecodeError()
 
         self.loaded = True
         return self.sgf

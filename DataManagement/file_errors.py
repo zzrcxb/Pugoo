@@ -2,7 +2,7 @@ class FileFormatError(Exception):
     pass
 
 
-class FileDecodeError(UnicodeDecodeError):
+class FileDecodeError(Exception):
     pass
 
 
