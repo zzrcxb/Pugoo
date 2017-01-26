@@ -24,3 +24,6 @@ class FileSizeError(FileContentError):
 
 class FileLabelMissed(FileContentError):
     pass
+
+class FileStepError(FileContentError):
+    pass

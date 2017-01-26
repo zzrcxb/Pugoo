@@ -23,7 +23,7 @@ def SGF2Json(sgf, labels, filename):  # result > 0 black win result < 0, white w
             i = ord(step[2][0]) - ord('a')
             j = ord(step[2][1]) - ord('a')
         else:
-            return None
+            raise FileStepError()
         result.append([i, j])
 
     bg_path = tmp_path + filename + '.bg'

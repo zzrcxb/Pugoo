@@ -14,11 +14,24 @@ def check_and_create():
             os.makedirs(folder1)
             flag = False
         for id2 in range(255):
-            folder2 = out_path + os.sep + '%02x' % id1 + os.sep + '%02x' % id2
+            folder2 = folder1 + os.sep + '%02x' % id2
             if not os.path.exists(folder2):
                 os.makedirs(folder2)
                 flag = False
     return flag
+
+
+def clear_dirs():
+    global out_path
+    for id1 in range(255):
+        folder1 = out_path + os.sep + '%02x' % id1
+        for id2 in range(255):
+            folder2 = folder1 + os.sep + '%02x' % id2
+            if not os.path.exists(folder2):
+                continue
+            else:
+                for file in os.listdir(folder2):
+                    os.remove(folder2 + os.sep + file)
 
 
 def get_file_md5(file_path, buf_size=65536):
