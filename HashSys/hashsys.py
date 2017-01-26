@@ -8,12 +8,12 @@ out_path = training_set_path
 def check_and_create():
     global out_path
     flag = True
-    for id1 in range(255):
+    for id1 in range(256):
         folder1 = out_path + os.sep + '%02x' % id1
         if not os.path.exists(folder1):
             os.makedirs(folder1)
             flag = False
-        for id2 in range(255):
+        for id2 in range(256):
             folder2 = folder1 + os.sep + '%02x' % id2
             if not os.path.exists(folder2):
                 os.makedirs(folder2)
