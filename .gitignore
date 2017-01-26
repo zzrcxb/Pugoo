@@ -101,6 +101,9 @@ Database/
 *.doc
 *.txt
 
+# run
+run.py
+
 # passwd
 config.py
 
