@@ -1,12 +1,9 @@
-from .__init__ import training_set_path
+from .__init__ import out_path
 import os
 import hashlib
 
-out_path = training_set_path
-
 
 def check_and_create():
-    global out_path
     flag = True
     for id1 in range(256):
         folder1 = out_path + os.sep + '%02x' % id1
@@ -19,19 +16,6 @@ def check_and_create():
                 os.makedirs(folder2)
                 flag = False
     return flag
-
-
-def clear_dirs():
-    global out_path
-    for id1 in range(255):
-        folder1 = out_path + os.sep + '%02x' % id1
-        for id2 in range(255):
-            folder2 = folder1 + os.sep + '%02x' % id2
-            if not os.path.exists(folder2):
-                continue
-            else:
-                for file in os.listdir(folder2):
-                    os.remove(folder2 + os.sep + file)
 
 
 def get_file_md5(file_path, buf_size=65536):
@@ -53,14 +37,25 @@ def get_file_md5(file_path, buf_size=65536):
     return md5.hexdigest()
 
 
-def move_file_by_hash(hash_code, file_path, debug=False):
-    global out_path
-    filename = file_path.split(os.sep)[-1]
-    if len(filename.split('.')) != 1:
-        extension = filename.split('.')[-1]
-    else:
-        extension = None
+def get_file_sha1(file_path, buf_size=65536):
+    sha1 = hashlib.sha1()
+    try:
+        with open(file_path, 'rb') as f:
+            while True:
+                data = f.read(buf_size)
+                if not data:
+                    break
+                sha1.update(data)
+    except FileNotFoundError as e:
+        print(e)
+        return False
+    except IOError as e:
+        print(e)
+        return False
+    return sha1.hexdigest()
 
+
+def move_file_by_hash(hash_code, file_path, extension=None, debug=False):
     destination = out_path + os.sep + hash_code[0:2] + os.sep + hash_code[2:4] + os.sep + hash_code
     if extension:
         destination = destination + '.' + extension
@@ -71,7 +66,11 @@ def move_file_by_hash(hash_code, file_path, debug=False):
         print('Destination', destination)
 
     try:
-        os.rename(file_path, destination)
+        if not os.path.exists(destination):
+            os.rename(file_path, destination)
+        else:
+            print('File existed!', file_path, '=>', destination)
+            return None
     except PermissionError as e:
         print(e)
         return False
@@ -81,53 +80,8 @@ def move_file_by_hash(hash_code, file_path, debug=False):
     return destination
 
 
-def move_file_to_hash(file_path, buf_size=65536, debug=False):
-    global out_path
-    md5 = hashlib.md5()
-    # Get file hash
-    try:
-        with open(file_path, 'rb') as f:
-            while True:
-                data = f.read(buf_size)
-                if not data:
-                    break
-                md5.update(data)
-    except FileNotFoundError as e:
-        print(e)
-        return False
-    except IOError as e:
-        print(e)
-        return False
-
-    # Move file
-    hash_code = md5.hexdigest()
-    filename = file_path.split(os.sep)[-1]
-    if len(filename.split('.')) != 1:
-        extension = filename.split('.')[-1]
-    else:
-        extension = None
-
-    destination = out_path + os.sep + hash_code[0:2] + os.sep + hash_code[2:4] + os.sep + hash_code
-    if extension:
-        destination = destination + '.' + extension
-
-    if debug:
-        print(file_path, 'MD5:', hash_code)
-        print('Extension', extension)
-        print('Destination', destination)
-
-    try:
-        os.rename(file_path, destination)
-    except PermissionError as e:
-        print(e)
-        return False
-    return hash_code
-
-
 # Return path of file
 def read_file_from_hash(file_md5, extension=None):
-    global out_path
-
     if len(file_md5) < 4:
         return False
     folder1 = file_md5[0:2]

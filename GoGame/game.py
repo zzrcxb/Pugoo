@@ -27,6 +27,8 @@ class Game:
         self.record = []
         self.pieces = [[Point([i, j], 0, -1) for i in range(self.board.linenum)] for j in range(self.board.linenum)]
         self.pointer = 0
+        self.komi = 0
+        self.handicap = 0
         # Deal with group
         self.id = 0
         self.graph = Graph(True)
@@ -289,7 +291,7 @@ class Game:
         size = len(self.graph.nodes[key].members)
         life = self.graph.nodes[key].life
 
-        return (sums, size, life, mycolor)
+        return sums, size, life, mycolor
 
     def res_clear(self):
         for key in self.graph.nodes:
@@ -320,6 +322,10 @@ class Game:
         self.save_game('test', r'D:\Users\Neil Zhao\Desktop\go2\test.bg')
 
     def add_point(self, axis):
+        if axis[0] == -1 and axis[1] == -1:
+            return True
+        elif axis[0] == -1 or axis[1] == -1:
+            return False
         # gui
         # self.board.add_point(axis, self.pointer + 1, 0.4)
         # logic

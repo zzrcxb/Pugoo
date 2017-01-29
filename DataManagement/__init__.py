@@ -28,5 +28,3 @@ else:
     tmp_path = TMP_PATH
 
 db_url = ''.join(['mysql+pymysql://', DB_USER, ':', DB_PASSWD , '@', DB_DOMAIN, '/', DB_NAME])
-
-check_and_create()

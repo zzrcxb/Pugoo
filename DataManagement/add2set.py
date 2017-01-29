@@ -7,12 +7,13 @@ from HashSys.hashsys import *
 from .file_errors import *
 import datetime
 import os
+from shutil import rmtree
 
 from .__init__ import *
 
 
 class Statistics:
-    def __init__(self):
+    def __init__(self, in_path, mode):
         self.total = 0
         self.valid = 0
         self.zh = 0
@@ -29,6 +30,9 @@ class Statistics:
         self.res_err = 0
         self.step_err = 0
         self.hand_err = 0
+        self.dupli_err = 0
+        self.in_path = in_path
+        self.mode = mode
 
     def save_statistics(self, file_path):
         save_time = str(datetime.datetime.now()).replace(':', '_')
@@ -39,6 +43,9 @@ class Statistics:
                 f.write('=================Statistic info====================\n')
                 f.write(
 """
+In path: %s
+Mode: %s
+
 Total: %d file(s)
 Valid: %d file(s)
 Chinese: %d file(s)
@@ -55,8 +62,10 @@ Content error: %d file(s)
      Handicap error: %d file(s)
 Decode error: %d file(s)
 Format error: %d file(s)
-""" % (self.total, self.valid, self.zh, self.jp, self.kr, self.ot, self.content_err, self.size_err, self.komi_err,
-       self.res_err, self.label_missed, self.step_err,  self.hand_err, self.decode_err, self.format_err))
+Duplicated files error: %d file(s)
+""" % (self.in_path, self.mode, self.total, self.valid, self.zh, self.jp, self.kr, self.ot,
+       self.content_err, self.size_err, self.komi_err, self.res_err, self.label_missed,
+       self.step_err,  self.hand_err, self.decode_err, self.format_err, self.dupli_err))
                 f.write('\n')
                 f.write(save_time)
         except IOError as e:
@@ -67,11 +76,13 @@ Format error: %d file(s)
 def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mode='normal'):
     if debug:
         print(db_url)
-    ss = Statistics()
+    ss = Statistics(in_path, mode)
     # Deal with database
     engine = create_engine(db_url)
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
+
+    file_pool = []
 
     for root, dirs, files in os.walk(in_path):
         for file in files:
@@ -133,9 +144,15 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mod
             if mode == 'normal':
                 if not move_file_by_hash(file_hash, tmp_path + raw_name + '.bg'):
                     print(file_path, 'Move file error')
+                    ss.dupli_err += 1
                     continue
             elif mode == 'resume':
-                pass
+                if file_hash in file_pool:
+                    ss.dupli_err += 1
+                    continue
+                if not read_file_from_hash(file_hash):
+                    continue
+                file_pool.append(file_hash)
             else:
                 print('unexpected mode')
                 return None
@@ -151,5 +168,10 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mod
     except IntegrityError:
         print('Duplicated entry, build training data set failed')
         return None
+
+    # Clear temp folder
+    rmtree(tmp_path)
+    os.makedirs(tmp_path[0:-1])
+
     if log_path:
         ss.save_statistics(log_path)
