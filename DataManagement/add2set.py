@@ -64,7 +64,7 @@ Format error: %d file(s)
             return None
 
 
-def add2set(in_path, f_format=None, source=None, debug=False, log_path=None):
+def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mode='normal'):
     if debug:
         print(db_url)
     ss = Statistics()
@@ -72,10 +72,6 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None):
     engine = create_engine(db_url)
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-
-    if in_path.find(raw_path[1:-1]) == -1:
-        in_folder = in_path
-        in_path = raw_path + in_folder
 
     for root, dirs, files in os.walk(in_path):
         for file in files:
@@ -132,11 +128,17 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None):
                 print(file_path, 'Convert error')
                 continue
 
-            # Move file and add to session
             file_hash = get_file_md5(file_path)
-            if not move_file_by_hash(file_hash, tmp_path + raw_name + '.bg'):
-                print(file_path, 'Move file error')
-                continue
+            # Move file and add to session
+            if mode == 'normal':
+                if not move_file_by_hash(file_hash, tmp_path + raw_name + '.bg'):
+                    print(file_path, 'Move file error')
+                    continue
+            elif mode == 'resume':
+                pass
+            else:
+                print('unexpected mode')
+                return None
             go_base.filehash = file_hash
             go_base.filesource = repr(source)
             go_base.rawfilepath = file_path
