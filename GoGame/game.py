@@ -73,9 +73,16 @@ class Game:
     def add_piece(self, axis):
         i = axis[1]
         j = axis[0]
+        if i == -1 and j == -1:
+            return True
+        if i * j == -1:
+            return False
+
         if self.pieces[i][j].color != 0:
             return False
-        self.pieces[i][j].color = -(self.pointer % 2) * 2 + 1  # Black -1, white 1
+
+        self.pieces[i][j].color = -(self.pointer % 2) * 2 + 1  # Black 1, white -1
+        print(self.pointer, axis, self.pieces[i][j].color)
         view = [[3 for i in range(3)] for i in range(3)]
         view[1][1] = self.pieces[i][j].color
         max_index = self.board.linenum - 1
@@ -258,8 +265,8 @@ class Game:
 
         self.clear_dead()
         # if self.showgroup:
-        #     print('=====', self.pointer, '====')
-        #     self.graph.print()
+            # print('=====', self.pointer, '====')
+            # self.graph.print()
         return True
 
     def backup(self):
@@ -374,7 +381,6 @@ class Game:
         with open(path, 'r') as out:
             j = json.load(out)
         self.record = j['record']
-        self.name = j['name']
 
     def save_game(self, name, path):
         print(dict(name=name, record=self.record))

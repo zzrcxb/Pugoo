@@ -18,10 +18,10 @@ class GoBase(TableBase):
 
     def __repr__(self):
         return '<GoBase(filehash = %s, fileformat = %s, filesource = %s, rawfilepath = %s, ' \
-               'size = %s, rule = %s, komi = %s, result = %s)>' \
+               'size = %s, rule = %s, komi = %s, result = %s, handicap=%s)>' \
                % \
                (self.filehash, self.fileformatm, self.filesource,
-                self.rawfilepath, self.size, self.rule, self.komi, self.result)
+                self.rawfilepath, self.size, self.rule, self.komi, self.result, self.handicap)
 
     def __str__(self):
         return self.__repr__()

@@ -5,6 +5,7 @@ from .converter import SGF2Json
 from .sgfreader import SGF
 from HashSys.hashsys import *
 from .file_errors import *
+from .custom import custom
 import datetime
 import os
 from shutil import rmtree
@@ -16,11 +17,7 @@ class Statistics:
     def __init__(self, in_path, mode):
         self.total = 0
         self.valid = 0
-        self.zh = 0
-        self.jp = 0
-        self.kr = 0
-        self.ot = 0
-
+        self.rules = dict(Chinese=0, Japanese=0, Korean=0, Other=0)
         self.content_err = 0
         self.format_err = 0
         self.decode_err = 0
@@ -63,9 +60,9 @@ Content error: %d file(s)
 Decode error: %d file(s)
 Format error: %d file(s)
 Duplicated files error: %d file(s)
-""" % (self.in_path, self.mode, self.total, self.valid, self.zh, self.jp, self.kr, self.ot,
-       self.content_err, self.size_err, self.komi_err, self.res_err, self.label_missed,
-       self.step_err,  self.hand_err, self.decode_err, self.format_err, self.dupli_err))
+""" % (self.in_path, self.mode, self.total, self.valid, self.rules['Chinese'], self.rules['Japanese'],
+       self.rules['Korean'], self.rules['Other'], self.content_err, self.size_err, self.komi_err, self.res_err,
+       self.label_missed, self.step_err,  self.hand_err, self.decode_err, self.format_err, self.dupli_err))
                 f.write('\n')
                 f.write(save_time)
         except IOError as e:
@@ -98,7 +95,7 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mod
 
             # Read sgf file
             sgf = SGF()
-            sgf.rule = 'Chinese'
+            custom(sgf)
             try:
                 content = sgf.load(file_path)
             except FileDecodeError:
@@ -129,7 +126,11 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mod
             except FileFormatError:
                 ss.format_err += 1
                 continue
-
+            try:
+                ss.rules[sgf.rule] += 1
+            except KeyError as e:
+                print(e)
+                pass
             # Get base and convert
             try:
                 go_base = SGF2Json(content, sgf.labels, raw_name)

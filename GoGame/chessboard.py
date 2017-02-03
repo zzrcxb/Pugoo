@@ -9,11 +9,11 @@ class Piece:
         self.color = -(num % 2) * 2 + 1
 
 
-# We use 0 for available, 1 for white, 2 for white space, -1 for black, -2 for black space
+# We use 0 for available, -1 for white, -2 for white space, 1 for black, 2 for black space
 class ChessBoard:
     def __init__(self, root, pos, dis, linenum=19):
         self.dim = dis * (linenum - 1)
-        self.grids = tk.Canvas(root, width=self.dim + 40, height=self.dim + 40, bd=0, bg='#ffe698')
+        self.grids = tk.Canvas(root, width=self.dim + 60, height=self.dim + 60, bd=0, bg='#ffe698')
         self.grids.pack()
         self.distance = dis
         self.grids.create_rectangle(pos[0], pos[1], pos[0] + self.dim, pos[1] + self.dim)
@@ -34,11 +34,23 @@ class ChessBoard:
 
     def show_groups(self, group, show):
         if show:
+            while 1:
+                color = self.colors[self.color_pointer]
+                if group.color == -1:
+                    distance = compare_color(color, '#FFFFFF')
+                else:
+                    distance = compare_color(color, '#000000')
+                if distance > 200:
+                    # print(distance, group.name, group.color, color)
+                    break
+                else:
+                    self.color_pointer += 1
+                    self.color_pointer %= len(self.colors)
             handle = []
             for member in group.members:
                 x = self.cross[0][member.x]
                 y = self.cross[1][member.y]
-                text = self.grids.create_text(x, y, text=str(group.name), fill=self.colors[self.color_pointer])
+                text = self.grids.create_text(x, y, text=str(group.name), fill=color)
                 handle.append(text)
             self.color_pointer += 1
             self.color_pointer %= len(self.colors)
@@ -116,3 +128,14 @@ class ChessBoard:
             text = self.grids.create_text(x, y, text=str(num), fill='white')
         self.grids.update()
         self.pieces_canvas[axis[0]][axis[1]] = Piece(num, oval, text)
+
+def compare_color(c1, c2):
+    from math import sqrt
+    r1 = int(c1[1:3], base=16)
+    g1 = int(c1[3:5], base=16)
+    b1 = int(c1[5:7], base=16)
+    r2 = int(c2[1:3], base=16)
+    g2 = int(c2[3:5], base=16)
+    b2 = int(c2[5:7], base=16)
+
+    return sqrt((r1 - r2) ** 2 + (b1 - b2) ** 2 + (g1 - g2) ** 2)

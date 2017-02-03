@@ -58,4 +58,4 @@ class Graph():
     def print(self):
         print("Nodes:")
         for key in self.nodes:
-            print(self.nodes[key],self.arcs[key], self.nodes[key].life)
+            print(self.nodes[key],self.arcs[key], self.nodes[key].life, self.nodes[key].color)

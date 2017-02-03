@@ -56,7 +56,7 @@ def get_file_sha1(file_path, buf_size=65536):
 
 
 def move_file_by_hash(hash_code, file_path, extension=None, debug=False):
-    destination = out_path + os.sep + hash_code[0:2] + os.sep + hash_code[2:4] + os.sep + hash_code
+    destination = out_path + hash_code[0:2] + os.sep + hash_code[2:4] + os.sep + hash_code
     if extension:
         destination = destination + '.' + extension
 
