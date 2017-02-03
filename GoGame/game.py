@@ -1,6 +1,7 @@
 import json
 from .group import Group
 from .graph import Graph
+from .final import get_final_group_prop
 from numpy import sign, abs
 from numpy.random import randint
 import numpy as np
@@ -82,11 +83,12 @@ class Game:
             return False
 
         self.pieces[i][j].color = -(self.pointer % 2) * 2 + 1  # Black 1, white -1
-        print(self.pointer, axis, self.pieces[i][j].color)
+
         view = [[3 for i in range(3)] for i in range(3)]
         view[1][1] = self.pieces[i][j].color
         max_index = self.board.linenum - 1
         mycolor = view[1][1]
+        border = False
 
         # setting up views
         if i != 0:
@@ -123,6 +125,9 @@ class Game:
             for n in range(3):
                 if view[m][n] != 3:
                     view[m][n] *= mycolor
+        # Check border
+        if view[0][1] == 3 or view[1][0] == 3 or view[1][2] == 3 or view[2][1] == 3:
+            border = True
         # set surround
         nearby = []
         surround = 0
@@ -139,6 +144,7 @@ class Game:
         # Single dot
         if cnt == 0:
             g = Group(self.id, {Point(axis, mycolor, self.id), }, mycolor)  # new group
+            g.border = border
             self.pieces[i][j].key = self.id
             self.id += 1
             self.graph.add_node(g, g.name)
@@ -180,9 +186,11 @@ class Game:
             if len(group_type) == 1:
                 key = group_type[0]
                 self.pieces[i][j].key = key
-                self.graph.nodes[key].members.add(self.pieces[i][j])
-                self.graph.nodes[key].life += 4 - surround
                 g = self.graph.nodes[key]
+                g.members.add(self.pieces[i][j])
+                g.life += 4 - surround
+                g.border = g.border | border
+
                 # Link
                 for m in range(2):
                     for n in range(2):
@@ -218,6 +226,7 @@ class Game:
             # Link all nearby groups
             else:
                 g = Group(self.id, {Point(axis, mycolor, self.id), }, mycolor)  # new group
+                g.border = border
                 g.life = 4 - surround
                 self.id += 1
                 self.pieces[i][j].key = g.name
@@ -227,9 +236,12 @@ class Game:
                         self.pieces[a.y][a.x].key = g.name
                         a.key = g.name
                     self.graph.nodes[g.name].life += self.graph.nodes[key].life
+                    g.border = g.border | self.graph.nodes[key].border
+
                 if self.showgroup:
                     for group in group_type:
                         self.board.show_groups(self.graph.nodes[group], False)
+
                 group_type.append(g.name)
                 self.graph.combine_nodes(group_type)
                 # Set link
@@ -264,10 +276,24 @@ class Game:
                     self.board.show_groups(g, True)
 
         self.clear_dead()
-        # if self.showgroup:
-            # print('=====', self.pointer, '====')
-            # self.graph.print()
+        if self.showgroup:
+            print('=====', self.pointer, '====')
+            self.graph.print()
         return True
+
+    def get_arc_circles(self):
+        pass
+
+    def set_final_group_prop(self):
+        for key in self.graph.nodes:
+            group = self.graph.nodes[key]
+            res = get_final_group_prop(group, self.board.linenum)
+            group.sizex = res['sx']
+            group.sizey = res['sy']
+            group.size = res['size']
+            group.eyes = res['eyes']
+            group.mass_core = res['mass_core']
+            group.lines = len(self.graph.arcs[key])
 
     def backup(self):
         self.__backup__.append([deepcopy(self.pieces), deepcopy(self.graph)])
@@ -401,3 +427,4 @@ class Game:
                 num += 1
                 self.record.append([i, j])
         self.pointer = len(self.record)
+

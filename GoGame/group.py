@@ -5,6 +5,7 @@ class Group():
         self.color = color
         self.protected = False
         self.attention = False
+        self.border = False
 
     def __str__(self):
         s = ''
