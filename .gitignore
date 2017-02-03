@@ -103,7 +103,6 @@ Database/
 
 # run
 run.py
-run.py.*
 
 # passwd
 config.py
