@@ -20,6 +20,7 @@ class Graph():
             for k in self.arcs:
                 try:
                     self.arcs[k].remove(key)
+                    self.nodes[k].lines = len(self.arcs[k])
                     if key in self.arc_num[k]:
                         del self.arc_num[k][key]
                 except KeyError:
@@ -66,6 +67,7 @@ class Graph():
                 if key != remain:
                     self.arcs[key].add(remain)
                     self.arc_num[key][remain] = self.arc_num[remain][key]
+            self.nodes[key].lines = len(self.arcs[key])
 
     # Be aware of KeyError
     def add_arc(self, key1, key2):
@@ -76,8 +78,10 @@ class Graph():
             else:
                 self.arcs[key1].add(key2)
                 self.arc_num[key1][key2] = 1
+                self.nodes[key1].lines += 1
                 self.arcs[key2].add(key1)
                 self.arc_num[key2][key1] = 1
+                self.nodes[key2].lines += 1
 
     def get_node(self, key):
         return self.nodes[key]
@@ -92,4 +96,4 @@ class Graph():
         print("Nodes:")
         for key in self.nodes:
             node = self.nodes[key]
-            print(node, self.arcs[key], self.arc_num[key], node.life, node.color, node.border)
+            print(node.name, self.arcs[key], self.arc_num[key], node.life, node.color, node.border, node.lines)

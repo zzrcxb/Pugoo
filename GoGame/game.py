@@ -276,9 +276,9 @@ class Game:
                     self.board.show_groups(g, True)
 
         self.clear_dead()
-        if self.showgroup:
-            print('=====', self.pointer, '====')
-            self.graph.print()
+        # if self.showgroup:
+        #     print('=====', self.pointer, '====')
+        #     self.graph.print()
         return True
 
     def get_arc_circles(self):
@@ -293,7 +293,6 @@ class Game:
             group.size = res['size']
             group.eyes = res['eyes']
             group.mass_core = res['mass_core']
-            group.lines = len(self.graph.arcs[key])
 
     def backup(self):
         self.__backup__.append([deepcopy(self.pieces), deepcopy(self.graph)])

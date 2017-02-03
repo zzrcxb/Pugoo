@@ -78,7 +78,7 @@ def count_one_eye(window, adj, x, y):
 
 
 def circle_analysis(graph):
-    nodes = deepcopy(graph.nodes)
+    nodes = graph.nodes
     arcs = graph.arcs
     arc_num = graph.arc_num
     circles = Circles()
@@ -93,8 +93,6 @@ def circle_analysis(graph):
                          min(n1.sizey[0], n2.sizey[0]), max(n1.sizey[1], n2.sizey[1]))
                 circles.append(Circle({node_key, key}, range))
 
-    for node in nodes:
-        pass
     return circles
 
 

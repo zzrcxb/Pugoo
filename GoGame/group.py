@@ -6,6 +6,7 @@ class Group():
         self.protected = False
         self.attention = False
         self.border = False
+        self.lines = 0
 
     def __str__(self):
         s = ''
