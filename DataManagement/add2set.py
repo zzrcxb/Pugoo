@@ -136,6 +136,8 @@ def add2set(in_path, f_format=None, source=None, debug=False, log_path=None, mod
                 go_base = SGF2Json(content, sgf.labels, raw_name)
             except FileStepError:
                 ss.step_err += 1
+            except FileContentError:
+                ss.content_err += 1
             if not go_base:
                 print(file_path, 'Convert error')
                 continue

@@ -122,6 +122,6 @@ class SGF:
             return 0
         else:
             try:
-                return float(handicap)
+                return int(handicap)
             except ValueError:
                 raise FileHandicapError()

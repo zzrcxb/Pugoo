@@ -22,6 +22,7 @@ class ChessBoard:
         self.pieces_canvas = [[None for i in range(linenum)] for i in range(linenum)]
         self.create_array()
         self.groups = {}
+        self.territory = []
         self.colors = ['#FF0000', '#FFD700', '#00FFFF', '#F0F8FF', '#003366',
                        '#000080', '#E32636', '#00FF80', '#FF2400', '#FFFF00',
                        '#007FFF', '#30D5C8', '#2A52BE', '#5E86C1', '#FF00FF',
@@ -56,8 +57,36 @@ class ChessBoard:
             self.color_pointer %= len(self.colors)
             self.groups[group.name] = handle
         else:
-            for text in self.groups[group.name]:
-                self.grids.delete(text)
+            if not group:
+                for key in self.groups:
+                    for text in self.groups[key]:
+                        self.grids.delete(text)
+            else:
+                for text in self.groups[group.name]:
+                    self.grids.delete(text)
+
+    def show_territory(self, board=None, show=True):
+        if show:
+            for i in range(self.linenum):
+                for j in range(self.linenum):
+                    if board[i][j] == 1:
+                        draw = self.draw_cross((j, i), color='#000000')
+                        self.territory.append(draw)
+                    elif board[i][j] == -1:
+                        draw = self.draw_cross((j, i), color='#FFFFFF')
+                        self.territory.append(draw)
+        else:
+            for point in self.territory:
+                self.grids.delete(point[0])
+                self.grids.delete(point[1])
+
+    def draw_cross(self, axis, ratio=0.2, color='#FFFFFF'):  # axis = [x, y]
+        x = self.cross[0][axis[0]]
+        y = self.cross[1][axis[1]]
+        radius = self.distance * ratio
+        line1 = self.grids.create_line(x - radius, y - radius, x + radius, y + radius, fill=color, width=3)
+        line2 = self.grids.create_line(x - radius, y + radius, x + radius, y - radius, fill=color, width=3)
+        return line1, line2
 
     def create_array(self):
         self.cross = []
@@ -77,7 +106,7 @@ class ChessBoard:
         else:
             y = self.cross[1][num]
             self.grids.create_line(self.pos[0], y, self.pos[0] + self.dim, y)
-            self.grids.update()
+        self.grids.update()
 
     def create_board(self):
         i = 0
@@ -112,13 +141,13 @@ class ChessBoard:
             self.grids.update()
             self.pieces_canvas[x][y] = None
 
-    def add_point(self, axis, num, ratio):
-        x = self.cross[0][axis[0]]
-        y = self.cross[1][axis[1]]
+    def add_point(self, point, ratio=0.4):
+        x = self.cross[0][point.x]
+        y = self.cross[1][point.y]
         radius = ratio * self.distance
-        padding = 0
+        num = point.num
 
-        if num % 2 == 1:
+        if point.color == 1:
             oval = self.grids.create_oval(x - radius, y - radius, 
                 x + radius, y + radius, fill='black')
             text = self.grids.create_text(x, y, text=str(num), fill='black')
@@ -127,7 +156,8 @@ class ChessBoard:
                 x + radius, y + radius, fill='white')
             text = self.grids.create_text(x, y, text=str(num), fill='white')
         self.grids.update()
-        self.pieces_canvas[axis[0]][axis[1]] = Piece(num, oval, text)
+        self.pieces_canvas[point.x][point.y] = Piece(num, oval, text)
+
 
 def compare_color(c1, c2):
     from math import sqrt

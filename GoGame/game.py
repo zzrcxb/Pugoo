@@ -6,14 +6,20 @@ from numpy import sign, abs
 from numpy.random import randint
 import numpy as np
 from copy import deepcopy
+from config import GUI
+
+
+class NoBackUpRollBackError(Exception):
+    pass
 
 
 class Point:
-    def __init__(self, axis, color, key):
+    def __init__(self, axis, color, key, num=0):
         self.x = axis[0]
         self.y = axis[1]
         self.color = color
         self.key = key
+        self.num = num
 
     def tostring(self):
         return '[' + str(self.x) + ' ' + str(self.y) + ']'
@@ -23,22 +29,62 @@ class Point:
 
 
 class Game:
-    def __init__(self, board):
+    def __init__(self, board, _tic=False, _backup=True):
         self.board = board
         self.record = []
         self.pieces = [[Point([i, j], 0, -1) for i in range(self.board.linenum)] for j in range(self.board.linenum)]
         self.pointer = 0
         self.komi = 0
         self.handicap = 0
+        self.handicap_points = []
         # Deal with group
         self.id = 0
         self.graph = Graph(True)
         self.showgroup = False
         self.robbery = []
+        self.death = {1: 0, -1: 0}  # 1 for black, -1 for white
+        self.result = {1: 0, -1: 0}
         # For backup
         self.__backup__ = []
+        self.__tic__ = _tic
+        self.__backup__ = _backup
+        if _tic:
+            from monitor import Monitor
+            self.monitor = Monitor()
+
+    def clear_group(self, key):
+        if self.__tic__:
+            self.monitor.enter('clear_group')
+
+        color = self.graph.nodes[key].color
+        self.death[color] += len(self.graph.nodes[key].members)
+        if self.showgroup and GUI:
+            self.board.show_groups(self.graph.nodes[key], False)
+        for a in self.graph.nodes[key].members:
+            i = a.y
+            j = a.x
+            self.pieces[i][j].color = 0
+            if GUI:
+                self.board.remove_point([j, i])
+            # Set liberties around
+            for m in range(2):
+                for n in range(2):
+                    row = m - n + i
+                    col = m + n - 1 + j
+                    if row < 0 or col < 0 or row >= self.board.linenum or col >= self.board.linenum:
+                        continue
+                    if self.pieces[row][col].color == -color:
+                        temp_key = self.pieces[row][col].key
+                        self.graph.nodes[temp_key].life += 1
+        self.graph.remove_node(key)
+
+        if self.__tic__:
+            self.monitor.leave('clear_group')
 
     def clear_dead(self):
+        if self.__tic__:
+            self.monitor.enter('clear_dead')
+
         gonna_delete = []
         self.robbery = []
         for key in self.graph.nodes:
@@ -46,7 +92,8 @@ class Game:
                 if self.graph.nodes[key].life <= 0:
                     for member in self.graph.nodes[key].members:
                         self.pieces[member.y][member.x].color = 0
-                        self.board.remove_point([member.x, member.y])
+                        if GUI:
+                            self.board.remove_point([member.x, member.y])
                     gonna_delete.append(key)
             else:
                 self.graph.nodes[key].protected = False
@@ -54,6 +101,7 @@ class Game:
                 self.robbery.append(self.graph.nodes[key])
         for key in gonna_delete:
             color = self.graph.nodes[key].color
+            self.death[color] += len(self.graph.nodes[key].members)
             for a in self.graph.nodes[key].members:
                 i = a.y
                 j = a.x
@@ -66,12 +114,15 @@ class Game:
                         if self.pieces[row][col].color == -color:
                             temp_key = self.pieces[row][col].key
                             self.graph.nodes[temp_key].life += 1
-            if self.showgroup:
+            if self.showgroup and GUI:
                 self.board.show_groups(self.graph.nodes[key], False)
             self.graph.remove_node(key)
 
+            if self.__tic__:
+                self.monitor.leave('clear_dead')
+
     # 3 for border
-    def add_piece(self, axis):
+    def add_piece(self, axis, color):  # color is 1 for black, -1 for white
         i = axis[1]
         j = axis[0]
         if i == -1 and j == -1:
@@ -79,13 +130,18 @@ class Game:
         if i * j == -1:
             return False
 
-        if self.pieces[i][j].color != 0:
+        point = self.pieces[i][j]
+
+        if point.color != 0:
             return False
 
-        self.pieces[i][j].color = -(self.pointer % 2) * 2 + 1  # Black 1, white -1
+        point.color = color
+        point.num = self.pointer + 1
+        if GUI:
+            self.board.add_point(point)  # gui
 
         view = [[3 for i in range(3)] for i in range(3)]
-        view[1][1] = self.pieces[i][j].color
+        view[1][1] = point.color
         max_index = self.board.linenum - 1
         mycolor = view[1][1]
         border = False
@@ -143,9 +199,9 @@ class Game:
                     surround += 1
         # Single dot
         if cnt == 0:
-            g = Group(self.id, {Point(axis, mycolor, self.id), }, mycolor)  # new group
+            g = Group(self.id, {Point(axis, mycolor, self.id, self.pointer + 1), }, mycolor)  # new group
             g.border = border
-            self.pieces[i][j].key = self.id
+            point.key = self.id
             self.id += 1
             self.graph.add_node(g, g.name)
             g.life = 4 - surround
@@ -177,7 +233,7 @@ class Game:
                                 g.protected = True
                 if not g.protected:
                     return False
-            if self.showgroup:
+            if self.showgroup and GUI:
                 self.board.show_groups(g, True)
 
         else:
@@ -219,13 +275,13 @@ class Game:
                                     g.protected = True
                     if not g.protected:
                         return False
-                if self.showgroup:
+                if self.showgroup and GUI:
                     self.board.show_groups(g, False)
                     self.board.show_groups(g, True)
 
             # Link all nearby groups
             else:
-                g = Group(self.id, {Point(axis, mycolor, self.id), }, mycolor)  # new group
+                g = Group(self.id, {Point(axis, mycolor, self.id, self.pointer + 1), }, mycolor)  # new group
                 g.border = border
                 g.life = 4 - surround
                 self.id += 1
@@ -240,7 +296,8 @@ class Game:
 
                 if self.showgroup:
                     for group in group_type:
-                        self.board.show_groups(self.graph.nodes[group], False)
+                        if GUI:
+                            self.board.show_groups(self.graph.nodes[group], False)
 
                 group_type.append(g.name)
                 self.graph.combine_nodes(group_type)
@@ -272,7 +329,7 @@ class Game:
                                     g.protected = True
                     if not g.protected:
                         return False
-                if self.showgroup:
+                if self.showgroup and GUI:
                     self.board.show_groups(g, True)
 
         self.clear_dead()
@@ -285,6 +342,9 @@ class Game:
         pass
 
     def set_final_group_prop(self):
+        if self.__tic__:
+            self.monitor.enter('set final group')
+
         for key in self.graph.nodes:
             group = self.graph.nodes[key]
             res = get_final_group_prop(group, self.board.linenum)
@@ -294,8 +354,67 @@ class Game:
             group.eyes = res['eyes']
             group.mass_core = res['mass_core']
 
+        if self.__tic__:
+            self.monitor.leave('set final group')
+
+    def score_final(self, debug=False):
+        linenum = self.board.linenum
+        points = [[self.pieces[i][j].color for j in range(linenum)] for i in range(linenum)]
+        pieces = np.array(points)
+        pieces = np.pad(pieces, ((1, ), (1, )), mode='constant', constant_values=3)
+
+        black_points = np.count_nonzero(pieces == 1)
+        white_points = np.count_nonzero(pieces == -1)
+        # print(pieces)
+        _pieces = deepcopy(pieces)  # Apply changes on _pieces
+        dim = linenum + 2
+        while 1:
+            ones = np.array(np.where(pieces == 1)).transpose()  # black points
+            ones = list(map(list, ones))
+            n_ones = np.array(np.where(pieces == -1)).transpose()  # white points
+            n_ones = list(map(list, n_ones))
+            ones.extend(n_ones)
+            abs_ones = ones
+            for i, j in abs_ones:
+                mycolor = _pieces[i][j]
+                # Set points
+                for m in range(2):
+                    for n in range(2):
+                        row = m - n + i
+                        col = m + n - 1 + j
+                        if _pieces[row][col] == - mycolor * 2:  # Neutral point
+                            _pieces[row][col] = 4  # 4 for neutral
+                        if _pieces[row][col] == 0:
+                            _pieces[row][col] = mycolor * 2
+            _pieces[_pieces == 2] = 1
+            _pieces[_pieces == -2] = -1
+                # Compare
+            if abs(_pieces - pieces).sum() == 0:
+                break
+            pieces = _pieces
+            _pieces = deepcopy(pieces)
+
+        pieces = _pieces[1:dim - 1, 1:dim -1]
+        white = np.count_nonzero(pieces == -1)
+        black = np.count_nonzero(pieces == 1)
+        self.result[1] = black
+        self.result[-1] = white  + self.komi + self.handicap - 1
+        if debug:
+            print(dict(komi=self.komi, handicap=self.handicap))
+            print("Result", dict(b=self.result[1], w=self.result[-1]))
+            print("Areas", dict(b=black, w=white))
+            print("Territory", dict(b=black - black_points, w=white - white_points))
+            print("Death", dict(b=self.death[1], w=self.death[-1]))
+
+        if self.showgroup and GUI:
+            self.board.show_territory(pieces)
+
     def backup(self):
+        if self.__tic__:
+            self.monitor.enter('backup')
         self.__backup__.append([deepcopy(self.pieces), deepcopy(self.graph)])
+        if self.__tic__:
+            self.monitor.leave('backup')
 
     def restore(self):
         self.pieces = self.__backup__[-1][0]
@@ -344,7 +463,7 @@ class Game:
             axis = list(randint(linenum, size=2))
             axis[0] = int(axis[0])
             axis[1] = int(axis[1])
-            if not self.add_point(axis):
+            if not self.add_point(axis, 1):
                 max_fail += 1
             else:
                 max_fail = 0
@@ -353,7 +472,7 @@ class Game:
         print("Done")
         self.save_game('test', r'D:\Users\Neil Zhao\Desktop\go2\test.bg')
 
-    def add_point(self, axis):
+    def add_point(self, axis, color):
         if axis[0] == -1 and axis[1] == -1:
             return True
         elif axis[0] == -1 or axis[1] == -1:
@@ -361,26 +480,42 @@ class Game:
         # gui
         # self.board.add_point(axis, self.pointer + 1, 0.4)
         # logic
-        self.backup()
-        if self.add_piece(axis):
+        if self.__backup__:
+            self.backup()
+
+        if self.add_piece(axis, color):
             return True
         else:
             # self.board.remove_point(axis)
-            self.restore()
+            if self.__backup__:
+                self.restore()
+            else:
+                raise NoBackUpRollBackError()
             return False
 
     def next_step(self):
         if self.pointer < len(self.record):
-            axis = list(self.record[self.pointer])
-            # gui
-            self.board.add_point(axis, self.pointer + 1, 0.4)
+            if self.__backup__:
+                self.backup()
             # logic
-            self.backup()
-            if self.add_piece(axis):
+            axis = self.record[self.pointer][0:2]
+            color = self.record[self.pointer][2]
+            if self.__tic__:
+                self.monitor.enter('add_piece')
+            if self.add_piece(axis, color):
                 self.pointer += 1
             else:
-                self.board.remove_point(axis)
-                self.restore()
+                try:
+                    if GUI:
+                        self.board.remove_point(axis)
+                except:
+                    pass
+                if self.__backup__:
+                    self.restore()
+                else:
+                    raise NoBackUpRollBackError()
+            if self.__tic__:
+                self.monitor.leave('add_piece')
 
     def prev_step(self):
         print(self.pointer)
@@ -388,7 +523,8 @@ class Game:
             self.pointer -= 1
             axis = list(self.record[self.pointer])
             # gui
-            self.board.remove_point(axis)
+            if GUI:
+                self.board.remove_point(axis)
             # logic
             self.restore()
 
@@ -406,6 +542,23 @@ class Game:
         with open(path, 'r') as out:
             j = json.load(out)
         self.record = j['record']
+        self.komi = j["attrs"]['KM']
+        self.handicap = j["attrs"]['HA']
+        self.handicap_points = j['handicap']
+        if self.handicap != 0:  # Place handicap
+            for axis in self.handicap_points:
+                if self.__backup__:
+                    self.backup()
+                if not self.add_piece(axis, 1):
+                    try:
+                        if GUI:
+                            self.board.remove_point(axis)
+                    except:
+                        pass
+                    if self.__backup__:
+                        self.restore()
+                    else:
+                        raise NoBackUpRollBackError()
 
     def save_game(self, name, path):
         print(dict(name=name, record=self.record))
@@ -415,15 +568,5 @@ class Game:
     def show_groups(self):
         self.showgroup = not self.showgroup
         if not self.showgroup:
-            self.board.show_groups(self.graph, False)
-
-    def test(self):
-        num = 1
-        for i in range(self.board.linenum):
-            for j in range(self.board.linenum):
-                self.board.add_point((i, j), num, 0.4)
-                self.pieces[j][i] = -(num % 2) * 2 + 1
-                num += 1
-                self.record.append([i, j])
-        self.pointer = len(self.record)
-
+            self.board.show_groups(None, False)
+            # self.board.show_territory(None, False)
