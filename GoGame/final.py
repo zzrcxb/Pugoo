@@ -2,6 +2,7 @@ import numpy as np
 from .circle import Circle, Circles
 from copy import deepcopy
 
+
 def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, sizey)
     xs = [p.x for p in group.members]
     ys = [p.y for p in group.members]
@@ -21,6 +22,7 @@ def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, s
         window[p[1]][p[0]] = 1
     window = np.pad(window, ((1,), (1,)), mode='constant', constant_values=2)
     # Set up border judge
+    circles = Circles()
     borders = [False, False, False, False]  # Up, left, right, down
     if sizey[0] == 0:
         borders[0] = True
@@ -36,9 +38,9 @@ def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, s
         if pos[0].size == 0:
             break
         adjacent = [False, False, False, False]
-        count_one_eye(window, adjacent, pos[1][0], pos[0][0])
+        enclosed = []
+        count_one_eye(window, adjacent, pos[1][0], pos[0][0], enclosed, [sizex[0], sizey[0]])
         flag = True
-
         for i in range(4):
             if adjacent[i]:
                 if not borders[i]:
@@ -46,42 +48,77 @@ def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, s
                     break
         if flag:
             eyes_cnt += 1
-    return dict(mass_core=mass_core, size=number, eyes=eyes_cnt, sx=sizex, sy=sizey)
+            circle = Circle({group.name, }, enclosed, group.color, hash(tuple(enclosed)), (sizex, sizey), 'internal')
+            circles.append(circle)
+
+    return dict(mass_core=mass_core, size=number, eyes=eyes_cnt, sx=sizex, sy=sizey, circles=circles)
 
 
-def count_one_eye(window, adj, x, y):
+def count_one_eye(window, adj, x, y, enclosed, min):
     window[y][x] = -1
+    enclosed.append((x - 1 + min[0], y - 1 + min[1]))
     # Go up
     if window[y - 1][x] == 0:
-        count_one_eye(window, adj, x, y - 1)
+        count_one_eye(window, adj, x, y - 1, enclosed, min)
     elif window[y - 1][x] == 2:  # Border
         adj[0] = True
 
     # Go left
     if window[y][x - 1] == 0:
-        count_one_eye(window, adj, x - 1, y)
+        count_one_eye(window, adj, x - 1, y, enclosed, min)
     elif window[y][x - 1] == 2:  # Border
         adj[1] = True
 
     # Go right
     if window[y][x + 1] == 0:
-        count_one_eye(window, adj, x + 1, y)
+        count_one_eye(window, adj, x + 1, y, enclosed, min)
     elif window[y][x + 1] == 2:  # Border
         adj[2] = True
 
     # Go down
     if window[y + 1][x] == 0:
-        count_one_eye(window, adj, x, y + 1)
+        count_one_eye(window, adj, x, y + 1, enclosed, min)
     elif window[y + 1][x] == 2:  # Border
         adj[3] = True
     return
 
 
-def circle_analysis(graph):
+def
+
+
+def circle_analysis(graph, linenum):
     nodes = graph.nodes
     arcs = graph.arcs
     arc_num = graph.arc_num
     circles = Circles()
+    # Set lines
+    for _key in nodes:
+        if nodes[_key].border:
+            nodes[_key].lines += 1
+    # Set copy
+    graph = deepcopy(graph)
+    # Out circles
+    _gonna_remove = []
+    for _key in graph.nodes:
+        if graph.nodes[_key].lines == 1:
+            graph.nodes[_key].lines -= 1
+            for arc_key in graph.arcs[_key]:
+                graph.nodes[arc_key].lines -= 1
+            _gonna_remove.append(_key)
+    for _key in _gonna_remove:
+        graph.remove_node(_key)
+
+    # DFS
+    gonna_visit = [key for key in graph.nodes]
+    big_groups = []
+    for key in gonna_visit:
+        _group = []
+
+
+    # Internal circles
+    for node_key in nodes:
+        circles.extend(get_final_group_prop(nodes[node_key], linenum)['circles'])
+
     # Deal with two elem circles
     for node_key in arc_num:
         node = arc_num[node_key]
@@ -89,9 +126,8 @@ def circle_analysis(graph):
             if node[key] > 1:
                 n1 = nodes[node_key]
                 n2 = nodes[key]
-                range = (min(n1.sizex[0], n2.sizex[0]), max(n1.sizex[1], n2.sizex[1]),
-                         min(n1.sizey[0], n2.sizey[0]), max(n1.sizey[1], n2.sizey[1]))
-                circles.append(Circle({node_key, key}, range))
+                temp = n1.combine(n2)
+                circles.append(get_final_group_prop(temp, linenum))
 
     return circles
 
@@ -103,8 +139,8 @@ if __name__ == '__main__':
             self.y = y
 
     from group import Group
-    p = {point(0, 1), point(1, 1), point(2, 0), point(2, 1), point(2, 2),
-         point(3, 2), point(4, 2), point(5, 2), point(5, 1), point(5, 0),
-         point(2, 3), point(2, 4), point(3, 4), point(4, 4), point(4, 3)}
-    g = Group('he', p, 1)
+    p = {point(1, 2), point(2, 2), point(3, 1), point(3, 2), point(3, 3),
+         point(4, 3), point(5, 3), point(6, 3), point(6, 2), point(6, 1),
+         point(3, 4), point(3, 5), point(4, 5), point(5, 5), point(5, 4)}
+    g = Group(1, p, 1)
     print(get_final_group_prop(g, 19))

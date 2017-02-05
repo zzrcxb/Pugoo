@@ -7,6 +7,13 @@ class Group():
         self.attention = False
         self.border = False
         self.lines = 0
+        self.liberties = []
+
+    def combine(self, other):
+        if other.color != self.color:
+            return None
+        group = Group(self.name, self.members | other.members, self.color)
+        return group
 
     def __str__(self):
         s = ''

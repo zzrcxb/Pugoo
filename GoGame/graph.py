@@ -83,6 +83,25 @@ class Graph():
                 self.arc_num[key2][key1] = 1
                 self.nodes[key2].lines += 1
 
+    def group_dfs(self):
+        gonna_visit = [key for key in self.nodes]
+        big_groups = []
+        while len(gonna_visit) > 0:
+            _group = []
+            start_point = gonna_visit[0]
+            self.dfs(start_point, gonna_visit, _group)
+            big_groups.append(_group)
+        return big_groups
+
+    def dfs(self, point, gonna_visit, _group):
+        gonna_visit.remove(point)
+        _group.append()
+        connected = self.arcs[point]
+        for next_point in connected:
+            if next_point in gonna_visit:
+                self.dfs(next_point, gonna_visit, _group)
+        return
+
     def get_node(self, key):
         return self.nodes[key]
 

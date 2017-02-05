@@ -63,7 +63,10 @@ class Game:
         for a in self.graph.nodes[key].members:
             i = a.y
             j = a.x
-            self.pieces[i][j].color = 0
+            point = self.pieces[i][j]
+            point.color = 0
+            point.num = -1
+            point.key = 0
             if GUI:
                 self.board.remove_point([j, i])
             # Set liberties around
@@ -91,7 +94,10 @@ class Game:
             if not self.graph.nodes[key].protected:
                 if self.graph.nodes[key].life <= 0:
                     for member in self.graph.nodes[key].members:
-                        self.pieces[member.y][member.x].color = 0
+                        point = self.pieces[member.y][member.x]
+                        point.color = 0
+                        point.key = 0
+                        point.num = -1
                         if GUI:
                             self.board.remove_point([member.x, member.y])
                     gonna_delete.append(key)
@@ -131,10 +137,12 @@ class Game:
             return False
 
         point = self.pieces[i][j]
+        _backup = Point((point.x, point.y), point.color, point.key, point.num)
 
         if point.color != 0:
             return False
 
+        # Need roll back if anything goes wrong
         point.color = color
         point.num = self.pointer + 1
         if GUI:
@@ -208,18 +216,15 @@ class Game:
             if g.life == 0:
                 g.attention = True
             # Careful!!!!=================
-            for m in range(2):
-                for n in range(2):
-                    row = i - 1 + 2 * m
-                    col = j - 1 + 2 * n
-                    if view[2 * m][2 * n] == 1:  # same color, create arcs
-                        self.graph.add_arc(self.pieces[row][col].key, g.name)
+            _neighbors = []
+            # Set life
             for m in range(2):
                 for n in range(2):
                     row = m - n + i
                     col = m + n - 1 + j
                     if abs(view[m + 1 - n][m + n]) == 1:
                         self.graph.nodes[self.pieces[row][col].key].life -= 1
+                        _neighbors.append(self.pieces[row][col].key)
             if g.attention:
                 for m in range(2):
                     for n in range(2):
@@ -229,10 +234,30 @@ class Game:
                             key = self.pieces[row][col].key
                             if self.graph.nodes[key].life == 0:
                                 if self.graph.nodes[key] in self.robbery:
+                                    # Roll back
+                                    for neighbor in _neighbors:
+                                        self.graph.nodes[neighbor].life += 1
+                                    self.graph.remove_node(g.name)
+                                    point = _backup
+                                    if GUI:
+                                        self.board.remove_point((point.x, point.y))
                                     return False
                                 g.protected = True
                 if not g.protected:
+                    for neighbor in _neighbors:
+                        self.graph.nodes[neighbor].life += 1
+                    self.graph.remove_node(g.name)
+                    point = _backup
+                    if GUI:
+                        self.board.remove_point((point.x, point.y))
                     return False
+            # Set up arcs
+            for m in range(2):
+                for n in range(2):
+                    row = i - 1 + 2 * m
+                    col = j - 1 + 2 * n
+                    if view[2 * m][2 * n] == 1:  # same color, create arcs
+                        self.graph.add_arc(self.pieces[row][col].key, g.name)
             if self.showgroup and GUI:
                 self.board.show_groups(g, True)
 
@@ -247,14 +272,8 @@ class Game:
                 g.life += 4 - surround
                 g.border = g.border | border
 
-                # Link
-                for m in range(2):
-                    for n in range(2):
-                        row = i - 1 + 2 * m
-                        col = j - 1 + 2 * n
-                        if view[2 * m][2 * n] == 1:  # same color, create arcs
-                            self.graph.add_arc(self.pieces[row][col].key, g.name)
                 # Set life
+                _neighbors = []
                 for m in range(2):
                     for n in range(2):
                         row = m - n + i
@@ -262,6 +281,7 @@ class Game:
                         if abs(view[m + 1 - n][m + n]) == 1:
                             key = self.pieces[row][col].key
                             self.graph.nodes[key].life -= 1
+                            _neighbors.append(key)
                 if g.life == 0:
                     for m in range(2):
                         for n in range(2):
@@ -271,10 +291,28 @@ class Game:
                                 key = self.pieces[row][col].key
                                 if self.graph.nodes[key].life == 0:
                                     if self.graph.nodes[key] in self.robbery:
+                                        for neighbor in _neighbors:
+                                            self.graph.nodes[neighbor].life += 1
+                                        point = _backup
+                                        if GUI:
+                                            self.board.remove_point((point.x, point.y))
                                         return False
                                     g.protected = True
                     if not g.protected:
+                        for neighbor in _neighbors:
+                            self.graph.nodes[neighbor].life += 1
+                        point = _backup
+                        if GUI:
+                            self.board.remove_point((point.x, point.y))
                         return False
+                # Link
+                for m in range(2):
+                    for n in range(2):
+                        row = i - 1 + 2 * m
+                        col = j - 1 + 2 * n
+                        if view[2 * m][2 * n] == 1:  # same color, create arcs
+                            self.graph.add_arc(self.pieces[row][col].key, g.name)
+                # Show gui
                 if self.showgroup and GUI:
                     self.board.show_groups(g, False)
                     self.board.show_groups(g, True)
@@ -316,6 +354,7 @@ class Game:
                         if abs(view[m + 1 - n][m + n]) == 1:
                             key = self.pieces[row][col].key
                             self.graph.nodes[key].life -= 1
+                '''
                 if g.life == 0:
                     for m in range(2):
                         for n in range(2):
@@ -329,6 +368,7 @@ class Game:
                                     g.protected = True
                     if not g.protected:
                         return False
+                '''
                 if self.showgroup and GUI:
                     self.board.show_groups(g, True)
 
@@ -398,7 +438,9 @@ class Game:
         white = np.count_nonzero(pieces == -1)
         black = np.count_nonzero(pieces == 1)
         self.result[1] = black
-        self.result[-1] = white  + self.komi + self.handicap - 1
+        self.result[-1] = white  + self.komi
+        if self.handicap != 0:
+            self.result[-1] += self.handicap - 1
         if debug:
             print(dict(komi=self.komi, handicap=self.handicap))
             print("Result", dict(b=self.result[1], w=self.result[-1]))
@@ -477,21 +519,10 @@ class Game:
             return True
         elif axis[0] == -1 or axis[1] == -1:
             return False
-        # gui
-        # self.board.add_point(axis, self.pointer + 1, 0.4)
         # logic
         if self.__backup__:
             self.backup()
-
-        if self.add_piece(axis, color):
-            return True
-        else:
-            # self.board.remove_point(axis)
-            if self.__backup__:
-                self.restore()
-            else:
-                raise NoBackUpRollBackError()
-            return False
+        return self.add_piece(axis, color)
 
     def next_step(self):
         if self.pointer < len(self.record):
@@ -505,17 +536,10 @@ class Game:
             if self.add_piece(axis, color):
                 self.pointer += 1
             else:
-                try:
-                    if GUI:
-                        self.board.remove_point(axis)
-                except:
-                    pass
-                if self.__backup__:
-                    self.restore()
-                else:
-                    raise NoBackUpRollBackError()
+                return False
             if self.__tic__:
                 self.monitor.leave('add_piece')
+            return True
 
     def prev_step(self):
         print(self.pointer)
