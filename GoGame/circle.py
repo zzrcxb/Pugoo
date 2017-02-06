@@ -8,7 +8,7 @@ class Circle:
         self.key = key
 
     def __str__(self):
-        return 'Members:' + repr(self.members) + '\n' + repr(self.range) + '\nEnclosed:' + repr(self.enclosed)
+        return 'Members:' + repr(self.members) + '\nEnclosed:' + repr(self.enclosed)
 
     def __repr__(self):
         return self.__str__()
@@ -27,6 +27,10 @@ class Circles:
     def extend(self, other):
         for key in other.circles:
             self.append(other.circles[key])
+
+    def print(self):
+        for key in self.circles:
+            print(self.circles[key])
 
     def __str__(self):
         res = ''

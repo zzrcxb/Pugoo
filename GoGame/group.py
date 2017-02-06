@@ -12,11 +12,18 @@ class Group():
     def combine(self, other):
         if other.color != self.color:
             return None
-        group = Group(self.name, self.members | other.members, self.color)
-        return group
+        self.members = self.members | other.members
+        return self
+
+    def extend(self, others):
+        if len(others) < 1:
+            return None
+        group = self.combine(others[0])
 
     def __str__(self):
         s = ''
         for member in self.members:
             s = s + member.tostring()
-        return str(self.name) + ' ' + s + ' ' + str(self.color)
+        d = dict(name=self.name, color=self.color, life=self.life,
+                 lines=self.lines, eyes=self.eyes, size=self.size)
+        return repr(d) + s

@@ -1,7 +1,7 @@
 import json
 from .group import Group
 from .graph import Graph
-from .final import get_final_group_prop
+from .final import get_final_group_prop, circle_analysis
 from numpy import sign, abs
 from numpy.random import randint
 import numpy as np
@@ -33,10 +33,12 @@ class Game:
         self.board = board
         self.record = []
         self.pieces = [[Point([i, j], 0, -1) for i in range(self.board.linenum)] for j in range(self.board.linenum)]
+        self.linenum = self.board.linenum
         self.pointer = 0
         self.komi = 0
         self.handicap = 0
         self.handicap_points = []
+        self._pass = {1:0, -1:0}
         # Deal with group
         self.id = 0
         self.graph = Graph(True)
@@ -44,6 +46,7 @@ class Game:
         self.robbery = []
         self.death = {1: 0, -1: 0}  # 1 for black, -1 for white
         self.result = {1: 0, -1: 0}
+        # Deal with circles
         # For backup
         self.__backup__ = []
         self.__tic__ = _tic
@@ -132,11 +135,16 @@ class Game:
         i = axis[1]
         j = axis[0]
         if i == -1 and j == -1:
+            self._pass[color] += 1
             return True
         if i * j == -1:
             return False
-
-        point = self.pieces[i][j]
+        try:
+            point = self.pieces[i][j]
+        except IndexError as e:
+            print(e)
+            print(i, j)
+            return False
         _backup = Point((point.x, point.y), point.color, point.key, point.num)
 
         if point.color != 0:
@@ -378,8 +386,50 @@ class Game:
         #     self.graph.print()
         return True
 
-    def get_arc_circles(self):
-        pass
+    def circle_analysis(self):
+        self.circles = circle_analysis(self.graph, self.board.linenum)
+
+    def remove_dead(self, debug=False):
+        self.circle_analysis()
+        black_enclosed = set()
+        white_enclosed = set()
+        suspicious = []
+        _gonna_remove = []
+        in_circles = {}
+        for key in self.circles.circles:
+            circle = self.circles.circles[key]
+            for member in circle.members:
+                if member in in_circles:
+                    in_circles[member].append(key)
+                else:
+                    in_circles[member] = [key, ]
+            if circle.color == 1:
+                black_enclosed = black_enclosed | circle.enclosed
+            else:
+                white_enclosed = white_enclosed | circle.enclosed
+        enclosed = {1:black_enclosed, -1:white_enclosed}
+        # Set eyes
+        nodes = self.graph.nodes
+        arc = self.graph.arcs
+        for key in in_circles:
+            nodes[key].eyes += len(in_circles[key])
+        # With all enclosed points are set
+        for key in nodes:
+            node = nodes[key]
+            members = {(point.x, point.y) for point in node.members}
+            if members.issubset(enclosed[-node.color]):
+                if node.eyes == 0:
+                    _gonna_remove.append(key)
+                elif node.life < 2:
+                    _gonna_remove.append(key)
+                elif node.eyes == 1:
+                    suspicious.append(key)
+        for _ in _gonna_remove:
+            self.clear_group(_)
+        if debug:
+            print("Suspicious", suspicious)
+            print("Gonna remove", _gonna_remove)
+        return suspicious
 
     def set_final_group_prop(self):
         if self.__tic__:
@@ -437,8 +487,18 @@ class Game:
         pieces = _pieces[1:dim - 1, 1:dim -1]
         white = np.count_nonzero(pieces == -1)
         black = np.count_nonzero(pieces == 1)
-        self.result[1] = black
-        self.result[-1] = white  + self.komi
+        neutral = np.count_nonzero(pieces == 4)
+        half = int(neutral / 2)
+        n_w = 0
+        n_b = 0
+        # if neutral % 2 == 1:
+        #     if len(self.record) % 2 == 1:
+        #         n_w += 1
+        #     else:
+        #         n_b += 1
+
+        self.result[1] = black + n_b
+        self.result[-1] = white  + self.komi + n_w
         if self.handicap != 0:
             self.result[-1] += self.handicap - 1
         if debug:
@@ -450,6 +510,7 @@ class Game:
 
         if self.showgroup and GUI:
             self.board.show_territory(pieces)
+        return self.result[1] - self.result[-1]
 
     def backup(self):
         if self.__tic__:
@@ -515,10 +576,6 @@ class Game:
         self.save_game('test', r'D:\Users\Neil Zhao\Desktop\go2\test.bg')
 
     def add_point(self, axis, color):
-        if axis[0] == -1 and axis[1] == -1:
-            return True
-        elif axis[0] == -1 or axis[1] == -1:
-            return False
         # logic
         if self.__backup__:
             self.backup()
@@ -555,12 +612,14 @@ class Game:
     def goto(self, step):
         max = len(self.record)
         if step > max or step < 0:
-            return
+            return True
         while self.pointer != step:
             if step < self.pointer:
                 self.prev_step()
             else:
-                self.next_step()
+                if not self.next_step():
+                    return None
+        return True
 
     def load_game(self, path):
         with open(path, 'r') as out:

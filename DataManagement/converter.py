@@ -13,7 +13,7 @@ def SGF2Json(sgf, labels, filename):  # result > 0 black win result < 0, white w
     if labels['HA'] != 0:
         del labels['AB']
 
-    pattern = re.compile(r'[^A](B|W)(\[)([a-s]?[a-s]?)(\])')
+    pattern = re.compile(r'[^A](B|W)(\[)([a-t]?[a-t]?)(\])')
     result = []
     handicap = []
     steps = pattern.findall(sgf)
@@ -36,6 +36,8 @@ def SGF2Json(sgf, labels, filename):  # result > 0 black win result < 0, white w
         if len(step[2]) == 0:  # Someone pass
             i = -1
             j = -1
+        elif step[2] == 'tt':
+            i = j = -1
         elif len(step[2]) == 2:
             i = ord(step[2][0]) - ord('a')
             j = ord(step[2][1]) - ord('a')

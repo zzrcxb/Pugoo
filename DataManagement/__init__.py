@@ -1,6 +1,5 @@
 from config import *
 from os import sep
-from HashSys.hashsys import check_and_create
 
 if not RAW_DATA_PATH.endswith(sep):
     raw_path = RAW_DATA_PATH + sep

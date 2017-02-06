@@ -1,9 +1,17 @@
 import numpy as np
 from .circle import Circle, Circles
+from .group import Group
 from copy import deepcopy
 
 
-def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, sizey)
+def get_group_mass_core(group):
+    xs = [p.x for p in group.members]
+    ys = [p.y for p in group.members]
+    mass_core = sum(xs) / len(xs), sum(ys) / len(ys)
+    return mass_core
+
+
+def get_final_group_prop(group, line_num, members=None):  # (mass core, number, eyes, sizex, sizey)
     xs = [p.x for p in group.members]
     ys = [p.y for p in group.members]
     sizex = min(xs), max(xs)
@@ -30,7 +38,7 @@ def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, s
         borders[1] = True
     if sizex[1] == line_num - 1:
         borders[2] = True
-    if sizey[0] == line_num - 1:
+    if sizey[1] == line_num - 1:
         borders[3] = True
     # Walk
     while 1:
@@ -48,7 +56,10 @@ def get_final_group_prop(group, line_num):  # (mass core, number, eyes, sizex, s
                     break
         if flag:
             eyes_cnt += 1
-            circle = Circle({group.name, }, enclosed, group.color, hash(tuple(enclosed)), (sizex, sizey), 'internal')
+            if not members:
+                circle = Circle({group.name, }, enclosed, group.color, hash(tuple(enclosed)), (sizex, sizey), 'internal')
+            else:
+                circle = Circle(set(members), enclosed, group.color, hash(tuple(enclosed)), (sizex, sizey), 'internal')
             circles.append(circle)
 
     return dict(mass_core=mass_core, size=number, eyes=eyes_cnt, sx=sizex, sy=sizey, circles=circles)
@@ -83,14 +94,21 @@ def count_one_eye(window, adj, x, y, enclosed, min):
     return
 
 
-def
-
-
 def circle_analysis(graph, linenum):
     nodes = graph.nodes
     arcs = graph.arcs
     arc_num = graph.arc_num
     circles = Circles()
+    # Internal circles
+    for node_key in nodes:
+        cs = get_final_group_prop(nodes[node_key], linenum)
+        nodes[node_key].mass_core = cs['mass_core']
+        nodes[node_key].sx = cs['sx']
+        nodes[node_key].sy = cs['sy']
+        nodes[node_key].size = cs['size']
+        nodes[node_key].eyes = cs['eyes']
+        circles.extend(cs['circles'])
+
     # Set lines
     for _key in nodes:
         if nodes[_key].border:
@@ -98,26 +116,30 @@ def circle_analysis(graph, linenum):
     # Set copy
     graph = deepcopy(graph)
     # Out circles
-    _gonna_remove = []
-    for _key in graph.nodes:
-        if graph.nodes[_key].lines == 1:
-            graph.nodes[_key].lines -= 1
-            for arc_key in graph.arcs[_key]:
-                graph.nodes[arc_key].lines -= 1
-            _gonna_remove.append(_key)
-    for _key in _gonna_remove:
-        graph.remove_node(_key)
+    while 1:
+        _gonna_remove = []
+        for _key in graph.nodes:
+            if graph.nodes[_key].lines <= 1:
+                graph.nodes[_key].lines -= 1
+                for arc_key in graph.arcs[_key]:
+                    if arc_key == 128:
+                        print(_key)
+                    # graph.nodes[arc_key].lines -= 1
+                _gonna_remove.append(_key)
+        if len(_gonna_remove) == 0:
+            break
+        for _key in _gonna_remove:
+            graph.remove_node(_key)
 
-    # DFS
-    gonna_visit = [key for key in graph.nodes]
-    big_groups = []
-    for key in gonna_visit:
-        _group = []
-
-
-    # Internal circles
-    for node_key in nodes:
-        circles.extend(get_final_group_prop(nodes[node_key], linenum)['circles'])
+    big_group = graph.group_dfs()
+    _ = 0
+    for _g in big_group:
+        group = Group(_, set(), graph.nodes[_g[0]].color)
+        for key in _g:
+            group.combine(graph.nodes[key])
+        cs = get_final_group_prop(group, linenum, members=_g)['circles']
+        circles.extend(cs)
+        _ += 1
 
     # Deal with two elem circles
     for node_key in arc_num:
@@ -126,9 +148,9 @@ def circle_analysis(graph, linenum):
             if node[key] > 1:
                 n1 = nodes[node_key]
                 n2 = nodes[key]
-                temp = n1.combine(n2)
-                circles.append(get_final_group_prop(temp, linenum))
-
+                temp = Group(0, n1.members | n2.members, n1.color)
+                cs = get_final_group_prop(temp, linenum, members={node_key, key})['circles']
+                circles.extend(cs)
     return circles
 
 

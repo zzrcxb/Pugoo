@@ -9,7 +9,6 @@ class GoBase(TableBase):
     fileformat = Column(String(10), default=None)
     filesource = Column(String(64), default=None)
     rawfilepath = Column(String(256), nullable=False)
-
     size = Column(Integer, nullable=False)
     rule = Column(String(32), nullable=False)
     komi = Column(Float, nullable=False)

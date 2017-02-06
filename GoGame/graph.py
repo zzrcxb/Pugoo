@@ -21,6 +21,8 @@ class Graph():
                 try:
                     self.arcs[k].remove(key)
                     self.nodes[k].lines = len(self.arcs[k])
+                    if self.nodes[k].border:
+                        self.nodes[k].lines += 1
                     if key in self.arc_num[k]:
                         del self.arc_num[k][key]
                 except KeyError:
@@ -95,7 +97,7 @@ class Graph():
 
     def dfs(self, point, gonna_visit, _group):
         gonna_visit.remove(point)
-        _group.append()
+        _group.append(point)
         connected = self.arcs[point]
         for next_point in connected:
             if next_point in gonna_visit:

@@ -23,6 +23,7 @@ class ChessBoard:
         self.create_array()
         self.groups = {}
         self.territory = []
+        self.circles = []
         self.colors = ['#FF0000', '#FFD700', '#00FFFF', '#F0F8FF', '#003366',
                        '#000080', '#E32636', '#00FF80', '#FF2400', '#FFFF00',
                        '#007FFF', '#30D5C8', '#2A52BE', '#5E86C1', '#FF00FF',
@@ -79,6 +80,35 @@ class ChessBoard:
             for point in self.territory:
                 self.grids.delete(point[0])
                 self.grids.delete(point[1])
+
+    def show_circles(self, circles):
+        if circles:  # draw
+            for key in circles.circles:
+                circle = circles.circles[key]
+                if circle.color == 1:
+                    for point in circle.enclosed:
+                        l1, l2 = self.draw_corner(point, color='#FF0000', direction='up')
+                        self.circles.append((l1, l2))
+                elif circle.color == -1:
+                    for point in circle.enclosed:
+                        l1, l2 = self.draw_corner(point, color='#00FF00', direction='down')
+                        self.circles.append((l1, l2))
+                else:
+                    return None
+        else:  #delete
+            for point in self.circles:
+                self.grids.delete(point[0])
+                self.grids.delete(point[1])
+
+    def draw_corner(self,axis, ratio=0.2, color='#00FF00', direction='up'):
+        x = self.cross[0][axis[0]]
+        y = self.cross[1][axis[1]]
+        if direction == 'down':
+            ratio = -ratio
+        radius = self.distance * ratio
+        line1 = self.grids.create_line(x, y, x + radius, y, fill=color, width=3)
+        line2 = self.grids.create_line(x, y, x, y - radius, fill=color, width=3)
+        return line1, line2
 
     def draw_cross(self, axis, ratio=0.2, color='#FFFFFF'):  # axis = [x, y]
         x = self.cross[0][axis[0]]
