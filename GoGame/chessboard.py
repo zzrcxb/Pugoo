@@ -87,11 +87,11 @@ class ChessBoard:
                 circle = circles.circles[key]
                 if circle.color == 1:
                     for point in circle.enclosed:
-                        l1, l2 = self.draw_corner(point, color='#FF0000', direction='up')
+                        l1, l2 = self.draw_corner(point, color='#ba0101', direction='up')
                         self.circles.append((l1, l2))
                 elif circle.color == -1:
                     for point in circle.enclosed:
-                        l1, l2 = self.draw_corner(point, color='#00FF00', direction='down')
+                        l1, l2 = self.draw_corner(point, color='#049100', direction='down')
                         self.circles.append((l1, l2))
                 else:
                     return None
@@ -106,8 +106,8 @@ class ChessBoard:
         if direction == 'down':
             ratio = -ratio
         radius = self.distance * ratio
-        line1 = self.grids.create_line(x, y, x + radius, y, fill=color, width=3)
-        line2 = self.grids.create_line(x, y, x, y - radius, fill=color, width=3)
+        line1 = self.grids.create_line(x, y, x + radius, y, fill=color, width=4)
+        line2 = self.grids.create_line(x, y, x, y - radius, fill=color, width=4)
         return line1, line2
 
     def draw_cross(self, axis, ratio=0.2, color='#FFFFFF'):  # axis = [x, y]
@@ -140,9 +140,13 @@ class ChessBoard:
 
     def create_board(self):
         i = 0
+        x0 = self.cross[0][0]
+        y0 = self.cross[1][0]
         while i <= self.linenum:
             self.drawline(i, False)
             self.drawline(i, True)
+            self.grids.create_text(x0 - 15, self.cross[1][i], text=str(i), fill='black')
+            self.grids.create_text(self.cross[0][i], y0 - 15, text=str(i), fill='black')
             i += 1
         if self.linenum == 19:
             radius = self.distance * 0.1

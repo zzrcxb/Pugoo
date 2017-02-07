@@ -151,18 +151,21 @@ def circle_analysis(graph, linenum):
                 temp = Group(0, n1.members | n2.members, n1.color)
                 cs = get_final_group_prop(temp, linenum, members={node_key, key})['circles']
                 circles.extend(cs)
+
+    black_circles = []
+    white_circles = []
+    # Classify
+    for key in circles.circles:
+        if circles.circles[key].color == 1:
+            black_circles.append(key)
+        elif circles.circles[key].color == -1:
+            white_circles.append(key)
+    # Remove overlapped points
+    cs = circles.circles
+    for w_key in white_circles:
+        for b_key in black_circles:
+            if cs[w_key].enclosed.issubset(cs[b_key].enclosed):
+                cs[b_key].enclosed -= cs[w_key].enclosed
+            if cs[b_key].enclosed.issubset(cs[w_key].enclosed):
+                cs[w_key].enclosed -= cs[b_key].enclosed
     return circles
-
-
-if __name__ == '__main__':
-    class point:
-        def __init__(self, x, y):
-            self.x = x
-            self.y = y
-
-    from group import Group
-    p = {point(1, 2), point(2, 2), point(3, 1), point(3, 2), point(3, 3),
-         point(4, 3), point(5, 3), point(6, 3), point(6, 2), point(6, 1),
-         point(3, 4), point(3, 5), point(4, 5), point(5, 5), point(5, 4)}
-    g = Group(1, p, 1)
-    print(get_final_group_prop(g, 19))
