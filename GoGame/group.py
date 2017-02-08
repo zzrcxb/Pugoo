@@ -9,6 +9,15 @@ class Group():
         self.lines = 0
         self.liberties = []
 
+    def __deepcopy__(self, memodict={}):
+        g = Group(self.name, set(tuple(self.members)), self.color)
+        g.protected = self.protected
+        g.attention = self.attention
+        g.border = self.border
+        g.lines = self.lines
+        g.liberties = self.liberties[:]
+        return g
+
     def combine(self, other):
         if other.color != self.color:
             return None

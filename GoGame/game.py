@@ -5,7 +5,7 @@ from .final import get_final_group_prop, circle_analysis
 from numpy import sign, abs
 from numpy.random import randint
 import numpy as np
-from copy import deepcopy
+from copy import deepcopy, copy
 from config import GUI
 
 
@@ -50,10 +50,27 @@ class Game:
         # For backup
         self.__backup__ = []
         self.__tic__ = _tic
-        self.__backup__ = _backup
+        self.__backup = _backup
         if _tic:
             from monitor import Monitor
             self.monitor = Monitor()
+
+    def __deepcopy__(self, memodict={}):
+        g = Game(self.board, self.__tic__, self.__backup)
+        g.record = self.record
+        g.pieces = [[deepcopy(self.pieces[i][j]) for j in range(self.linenum)] for i in range(self.linenum)]
+        g.linenum = self.linenum
+        g.pointer = self.pointer
+        g.komi = self.komi
+        g.handicap = self.handicap
+        g.handicap_points = self.handicap_points
+        g._pass = copy(self._pass)
+        g.id = self.id
+        g.graph = deepcopy(self.graph)
+        g.showgroup = self.showgroup
+        g.robbery = deepcopy(self.robbery)
+        g.death = copy(self.death)
+        g.result = copy(self.result)
 
     def clear_group(self, key):
         if self.__tic__:
@@ -390,7 +407,12 @@ class Game:
         self.circles = circle_analysis(self.graph, self.board.linenum)
 
     def remove_dead(self, debug=False):
+        if self.__tic__:
+            self.monitor.enter('remove dead')
+            self.monitor.enter('circle_analysis')
         self.circle_analysis()
+        if self.__tic__:
+            self.monitor.leave('circle_analysis')
         black_enclosed = set()
         white_enclosed = set()
         suspicious = []
@@ -429,6 +451,8 @@ class Game:
         if debug:
             print("Suspicious", suspicious)
             print("Gonna remove", _gonna_remove)
+        if self.__tic__:
+            self.monitor.leave('remove dead')
         return suspicious
 
     def set_final_group_prop(self):
@@ -448,6 +472,7 @@ class Game:
             self.monitor.leave('set final group')
 
     def score_final(self, debug=False):
+        self.monitor.enter('score final')
         linenum = self.board.linenum
         points = [[self.pieces[i][j].color for j in range(linenum)] for i in range(linenum)]
         pieces = np.array(points)
@@ -510,6 +535,7 @@ class Game:
 
         if self.showgroup and GUI:
             self.board.show_territory(pieces)
+        self.monitor.leave('score final')
         return self.result[1] - self.result[-1]
 
     def backup(self):
@@ -577,13 +603,13 @@ class Game:
 
     def add_point(self, axis, color):
         # logic
-        if self.__backup__:
+        if self.__backup:
             self.backup()
         return self.add_piece(axis, color)
 
     def next_step(self):
         if self.pointer < len(self.record):
-            if self.__backup__:
+            if self.__backup:
                 self.backup()
             # logic
             axis = self.record[self.pointer][0:2]

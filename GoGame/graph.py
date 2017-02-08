@@ -1,9 +1,18 @@
+from copy import deepcopy, copy
+
 class Graph():
     # Opt option for optimizing speed with more memory needed
     def __init__(self, opt=False):
         self.nodes = {}  # Element is node
         self.arcs = {}  # Elements are a set consisted of nodes
         self.arc_num = {}
+
+    def __deepcopy__(self, memodict={}):
+        g = Graph()
+        g.nodes = {_: deepcopy(self.nodes[_]) for _ in self.nodes}
+        g.arcs = {_: set(tuple(self.arcs[_])) for _ in self.arcs}
+        g.arc_num = {_: self.arc_num[_] for _ in self.arc_num}
+        return g
 
     def add_node(self, node, key):
         if not key in self.nodes:
