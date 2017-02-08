@@ -7,7 +7,10 @@ class Group():
         self.attention = False
         self.border = False
         self.lines = 0
-        self.liberties = []
+        self.liberties = set()
+        self.eyes = -1
+        self.size = -1
+        self.life = -1
 
     def __deepcopy__(self, memodict={}):
         g = Group(self.name, set(tuple(self.members)), self.color)
@@ -34,5 +37,5 @@ class Group():
         for member in self.members:
             s = s + member.tostring()
         d = dict(name=self.name, color=self.color, life=self.life,
-                 lines=self.lines, eyes=self.eyes, size=self.size)
+                 lines=self.lines, eyes=self.eyes, size=self.size, liberties=self.liberties)
         return repr(d) + s

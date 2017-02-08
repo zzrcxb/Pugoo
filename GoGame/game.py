@@ -98,7 +98,8 @@ class Game:
                         continue
                     if self.pieces[row][col].color == -color:
                         temp_key = self.pieces[row][col].key
-                        self.graph.nodes[temp_key].life += 1
+                        self.graph.nodes[temp_key].liberties |= {(j, i), }
+                        self.graph.nodes[temp_key].life = len(self.graph.nodes[temp_key].liberties)
         self.graph.remove_node(key)
 
         if self.__tic__:
@@ -107,6 +108,9 @@ class Game:
     def clear_dead(self):
         if self.__tic__:
             self.monitor.enter('clear_dead')
+        nodes = self.graph.nodes
+        for key in nodes:
+            nodes[key].life = len(nodes[key].liberties)
 
         gonna_delete = []
         self.robbery = []
@@ -139,7 +143,8 @@ class Game:
                             continue
                         if self.pieces[row][col].color == -color:
                             temp_key = self.pieces[row][col].key
-                            self.graph.nodes[temp_key].life += 1
+                            self.graph.nodes[temp_key].liberties |= {(j, i), }
+                            self.graph.nodes[temp_key].life = len(self.graph.nodes[temp_key].liberties)
             if self.showgroup and GUI:
                 self.board.show_groups(self.graph.nodes[key], False)
             self.graph.remove_node(key)
@@ -149,6 +154,7 @@ class Game:
 
     # 3 for border
     def add_piece(self, axis, color):  # color is 1 for black, -1 for white
+        return_str = ''
         i = axis[1]
         j = axis[0]
         if i == -1 and j == -1:
@@ -220,6 +226,7 @@ class Game:
         # set surround
         nearby = []
         surround = 0
+        liberties = []
         cnt = 0
         for m in range(2):
             for n in range(2):
@@ -230,17 +237,20 @@ class Game:
                     cnt += 1
                 if view[m + 1 - n][m + n] != 0:
                     surround += 1
+                if view[m + 1 - n][m + n] == 0:
+                    liberties.append((col, row))
         # Single dot
         if cnt == 0:
             g = Group(self.id, {Point(axis, mycolor, self.id, self.pointer + 1), }, mycolor)  # new group
             g.border = border
+            g.liberties = set(liberties)
             point.key = self.id
+            g.life = 4 -surround
             self.id += 1
             self.graph.add_node(g, g.name)
-            g.life = 4 - surround
             if g.life == 0:
                 g.attention = True
-            # Careful!!!!=================
+            # ================Careful!!!!=================
             _neighbors = []
             # Set life
             for m in range(2):
@@ -248,7 +258,10 @@ class Game:
                     row = m - n + i
                     col = m + n - 1 + j
                     if abs(view[m + 1 - n][m + n]) == 1:
-                        self.graph.nodes[self.pieces[row][col].key].life -= 1
+                        node = self.graph.nodes[self.pieces[row][col].key]
+                        if tuple(axis) in self.graph.nodes[self.pieces[row][col].key].liberties:
+                            node.liberties.remove(tuple(axis))
+                            node.life = len(node.liberties)
                         _neighbors.append(self.pieces[row][col].key)
             if g.attention:
                 for m in range(2):
@@ -285,6 +298,7 @@ class Game:
                         self.graph.add_arc(self.pieces[row][col].key, g.name)
             if self.showgroup and GUI:
                 self.board.show_groups(g, True)
+            return_str = 'new'
 
         else:
             group_type = list(set([a.key for a in nearby]))
@@ -294,9 +308,8 @@ class Game:
                 self.pieces[i][j].key = key
                 g = self.graph.nodes[key]
                 g.members.add(self.pieces[i][j])
-                g.life += 4 - surround
-                g.border = g.border | border
-
+                g.border |= border
+                g.liberties |= set(liberties)
                 # Set life
                 _neighbors = []
                 for m in range(2):
@@ -305,7 +318,10 @@ class Game:
                         col = m + n - 1 + j
                         if abs(view[m + 1 - n][m + n]) == 1:
                             key = self.pieces[row][col].key
-                            self.graph.nodes[key].life -= 1
+                            node = self.graph.nodes[key]
+                            if tuple(axis) in self.graph.nodes[key].liberties:
+                                node.liberties.remove(tuple(axis))
+                                node.life = len(node.liberties)
                             _neighbors.append(key)
                 if g.life == 0:
                     for m in range(2):
@@ -341,12 +357,13 @@ class Game:
                 if self.showgroup and GUI:
                     self.board.show_groups(g, False)
                     self.board.show_groups(g, True)
+                return_str = 'append'
 
             # Link all nearby groups
             else:
                 g = Group(self.id, {Point(axis, mycolor, self.id, self.pointer + 1), }, mycolor)  # new group
                 g.border = border
-                g.life = 4 - surround
+                g.liberties |= set(liberties)
                 self.id += 1
                 self.pieces[i][j].key = g.name
                 self.graph.add_node(g, g.name)
@@ -354,8 +371,8 @@ class Game:
                     for a in self.graph.nodes[key].members:
                         self.pieces[a.y][a.x].key = g.name
                         a.key = g.name
-                    self.graph.nodes[g.name].life += self.graph.nodes[key].life
-                    g.border = g.border | self.graph.nodes[key].border
+                    g.border |= self.graph.nodes[key].border
+                    g.liberties |= self.graph.nodes[key].liberties
 
                 if self.showgroup:
                     for group in group_type:
@@ -378,7 +395,10 @@ class Game:
                         col = m + n - 1 + j
                         if abs(view[m + 1 - n][m + n]) == 1:
                             key = self.pieces[row][col].key
-                            self.graph.nodes[key].life -= 1
+                            node = self.graph.nodes[key]
+                            if tuple(axis) in self.graph.nodes[key].liberties:
+                                node.liberties.remove(tuple(axis))
+                                node.life = len(node.liberties)
                 '''
                 if g.life == 0:
                     for m in range(2):
@@ -396,12 +416,13 @@ class Game:
                 '''
                 if self.showgroup and GUI:
                     self.board.show_groups(g, True)
+                return_str = 'combine'
 
         self.clear_dead()
         # if self.showgroup:
         #     print('=====', self.pointer, '====')
         #     self.graph.print()
-        return True
+        return return_str
 
     def circle_analysis(self):
         self.circles = circle_analysis(self.graph, self.board.linenum)
@@ -521,7 +542,6 @@ class Game:
         #         n_w += 1
         #     else:
         #         n_b += 1
-
         self.result[1] = black + n_b
         self.result[-1] = white  + self.komi + n_w
         if self.handicap != 0:

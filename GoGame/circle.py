@@ -1,7 +1,7 @@
 class Circle:
-    def __init__(self, members, encloesd, color, key, range=None, type='normal'):  # type = 'normal', 'internal', 'dual'
+    def __init__(self, members, enclosed, color, key, range=None, type='normal'):  # type = 'normal', 'internal', 'dual'
         self.members = set(members)
-        self.enclosed = set(encloesd)
+        self.enclosed = set(enclosed)
         self.color = color
         self.range = range
         self.type = type
