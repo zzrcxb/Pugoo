@@ -11,7 +11,7 @@ class Graph():
         g = Graph()
         g.nodes = {_: deepcopy(self.nodes[_]) for _ in self.nodes}
         g.arcs = {_: set(tuple(self.arcs[_])) for _ in self.arcs}
-        g.arc_num = {_: self.arc_num[_] for _ in self.arc_num}
+        g.arc_num = deepcopy(self.arc_num)
         return g
 
     def add_node(self, node, key):

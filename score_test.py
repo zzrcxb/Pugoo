@@ -26,11 +26,16 @@ while 1:
     for result in results:
         g = Game(b, _backup=False)
         g.load_game(read_file_from_hash(result.filehash))
+        print(result.filehash)
         if not g.goto(len(g.record)):
             err_file.append(result.filehash)
             print("[Error!]" + result.filehash)
             continue
-        g.remove_dead()
+        try:
+            g.remover()
+        except:
+            print("E")
+            continue
         res = g.score_final()
         diff = abs(res - result.result)
         print(res, diff)

@@ -7,7 +7,7 @@ from numpy.random import randint
 import numpy as np
 from copy import deepcopy, copy
 from config import GUI
-
+import operator
 
 class NoBackUpRollBackError(Exception):
     pass
@@ -20,6 +20,10 @@ class Point:
         self.color = color
         self.key = key
         self.num = num
+
+    def __deepcopy__(self, memodict={}):
+        p = Point([self.x, self.y], self.color, self.key, self.num)
+        return p
 
     def tostring(self):
         return '[' + str(self.x) + ' ' + str(self.y) + ']'
@@ -58,7 +62,7 @@ class Game:
     def __deepcopy__(self, memodict={}):
         g = Game(self.board, self.__tic__, self.__backup)
         g.record = self.record
-        g.pieces = [[deepcopy(self.pieces[i][j]) for j in range(self.linenum)] for i in range(self.linenum)]
+        g.pieces = deepcopy(self.pieces)
         g.linenum = self.linenum
         g.pointer = self.pointer
         g.komi = self.komi
@@ -71,6 +75,7 @@ class Game:
         g.robbery = deepcopy(self.robbery)
         g.death = copy(self.death)
         g.result = copy(self.result)
+        return g
 
     def clear_group(self, key):
         if self.__tic__:
@@ -274,18 +279,20 @@ class Game:
                                 if self.graph.nodes[key] in self.robbery:
                                     # Roll back
                                     for neighbor in _neighbors:
-                                        self.graph.nodes[neighbor].life += 1
+                                        self.graph.nodes[neighbor].liberties.add(tuple(axis))
+                                        self.graph.nodes[neighbor].life = len(self.graph.nodes[neighbor].liberties)
                                     self.graph.remove_node(g.name)
-                                    point = _backup
+                                    self.pieces[i][j] = _backup
                                     if GUI:
                                         self.board.remove_point((point.x, point.y))
                                     return False
                                 g.protected = True
                 if not g.protected:
                     for neighbor in _neighbors:
-                        self.graph.nodes[neighbor].life += 1
+                        self.graph.nodes[neighbor].liberties.add(tuple(axis))
+                        self.graph.nodes[neighbor].life = len(self.graph.nodes[neighbor].liberties)
                     self.graph.remove_node(g.name)
-                    point = _backup
+                    self.pieces[i][j] = _backup
                     if GUI:
                         self.board.remove_point((point.x, point.y))
                     return False
@@ -298,7 +305,7 @@ class Game:
                         self.graph.add_arc(self.pieces[row][col].key, g.name)
             if self.showgroup and GUI:
                 self.board.show_groups(g, True)
-            return_str = 'new'
+            return_str = ('new', )
 
         else:
             group_type = list(set([a.key for a in nearby]))
@@ -330,19 +337,23 @@ class Game:
                             col = m + n - 1 + j
                             if abs(view[m + 1 - n][m + n]) == 1:
                                 key = self.pieces[row][col].key
+                                if key == g.name:
+                                    continue
                                 if self.graph.nodes[key].life == 0:
                                     if self.graph.nodes[key] in self.robbery:
                                         for neighbor in _neighbors:
-                                            self.graph.nodes[neighbor].life += 1
-                                        point = _backup
+                                            self.graph.nodes[neighbor].liberties.add(tuple(axis))
+                                            self.graph.nodes[neighbor].life = len(self.graph.nodes[neighbor].liberties)
+                                        self.pieces[i][j] = _backup
                                         if GUI:
                                             self.board.remove_point((point.x, point.y))
                                         return False
                                     g.protected = True
                     if not g.protected:
                         for neighbor in _neighbors:
-                            self.graph.nodes[neighbor].life += 1
-                        point = _backup
+                            self.graph.nodes[neighbor].liberties.add(tuple(axis))
+                            self.graph.nodes[neighbor].life = len(self.graph.nodes[neighbor].liberties)
+                        self.pieces[i][j] = _backup
                         if GUI:
                             self.board.remove_point((point.x, point.y))
                         return False
@@ -357,7 +368,7 @@ class Game:
                 if self.showgroup and GUI:
                     self.board.show_groups(g, False)
                     self.board.show_groups(g, True)
-                return_str = 'append'
+                return_str = ('append', )
 
             # Link all nearby groups
             else:
@@ -416,7 +427,8 @@ class Game:
                 '''
                 if self.showgroup and GUI:
                     self.board.show_groups(g, True)
-                return_str = 'combine'
+                group_type.append(g.name)
+                return_str = ('combine', group_type)
 
         self.clear_dead()
         # if self.showgroup:
@@ -427,7 +439,7 @@ class Game:
     def circle_analysis(self):
         self.circles = circle_analysis(self.graph, self.board.linenum)
 
-    def remove_dead(self, debug=False):
+    def remove_dead(self, debug=False, color=None):
         if self.__tic__:
             self.monitor.enter('remove dead')
             self.monitor.enter('circle_analysis')
@@ -454,27 +466,65 @@ class Game:
         # Set eyes
         nodes = self.graph.nodes
         arc = self.graph.arcs
-        for key in in_circles:
-            nodes[key].eyes += len(in_circles[key])
+        # for key in in_circles:
+        #     nodes[key].eyes += len(in_circles[key])
         # With all enclosed points are set
         for key in nodes:
             node = nodes[key]
             members = {(point.x, point.y) for point in node.members}
             if members.issubset(enclosed[-node.color]):
-                if node.eyes == 0:
+                if node.eyes == 0 and node.lines < 2:
                     _gonna_remove.append(key)
                 elif node.life < 2:
                     _gonna_remove.append(key)
-                elif node.eyes == 1:
+                elif node.eyes <= 1:
                     suspicious.append(key)
-        for _ in _gonna_remove:
-            self.clear_group(_)
+        if not color:
+            for _ in _gonna_remove:
+                if nodes[_] not in self.robbery:
+                    self.clear_group(_)
+        else:
+            suspicious.extend(_gonna_remove)
         if debug:
             print("Suspicious", suspicious)
             print("Gonna remove", _gonna_remove)
         if self.__tic__:
             self.monitor.leave('remove dead')
-        return suspicious
+        return suspicious, len(_gonna_remove)
+
+    def remover(self, debug=False):
+        if debug:
+            cnt = 0
+        while 1:
+            if debug:
+                print("======", cnt, "======")
+                cnt += 1
+            suspicious, size = self.remove_dead(debug)
+            # game = self.__deepcopy__()
+            _gonna_delete = self.check_suspicious(suspicious)
+            a = [[self.pieces[i][j].key for j in range(19)] for i in range(19)]
+            for key in _gonna_delete:
+                self.clear_group(key)
+            if size == 0:
+                break
+
+    def get_liberties(self, axis):
+        j, i = axis
+        sur = 0
+        nearby = []
+        if i < 0 or j < 0 or i >= self.linenum or j >= self.linenum:
+            return None
+        for m in range(2):
+            for n in range(2):
+                row = m - n + i
+                col = m + n - 1 + j
+                if row < 0 or col < 0 or row >= self.linenum or col >= self.linenum:
+                    sur += 1
+                elif abs(self.pieces[row][col].color) == 1:
+                    sur += 1
+                elif self.pieces[row][col].color == 0:
+                    nearby.append((col, row))
+        return 4 - sur, nearby
 
     def set_final_group_prop(self):
         if self.__tic__:
@@ -493,7 +543,8 @@ class Game:
             self.monitor.leave('set final group')
 
     def score_final(self, debug=False):
-        self.monitor.enter('score final')
+        if self.__tic__:
+            self.monitor.enter('score final')
         linenum = self.board.linenum
         points = [[self.pieces[i][j].color for j in range(linenum)] for i in range(linenum)]
         pieces = np.array(points)
@@ -555,7 +606,8 @@ class Game:
 
         if self.showgroup and GUI:
             self.board.show_territory(pieces)
-        self.monitor.leave('score final')
+        if self.__tic__:
+            self.monitor.leave('score final')
         return self.result[1] - self.result[-1]
 
     def backup(self):
@@ -699,3 +751,149 @@ class Game:
         if not self.showgroup:
             self.board.show_groups(None, False)
             # self.board.show_territory(None, False)
+
+    def check_suspicious(self, suspicious, _max=50):
+        game = Game(self.board, _backup=False)
+        game.pieces = deepcopy(self.pieces)
+        game.graph = deepcopy(self.graph)
+        game.showgroup = self.showgroup
+        game.robbery = deepcopy(self.robbery)
+        game.record = deepcopy(self.record)
+        game.id = self.id
+        graph = game.graph
+        _gonna_delete = []
+        ws = set()
+        bs = set()
+        for key in suspicious:
+            if graph.nodes[key].color == 1:  # Black group
+                bs.add(key)
+            elif graph.nodes[key].color == -1:  # White group
+                ws.add(key)
+        dominant = - game.record[-1][-1]
+        suspicious = {1: ws, -1: bs}
+        while len(suspicious[1]) > 0 or len(suspicious[-1]) > 0 and _max > 0:
+            cnt = 0
+            # Attack
+            nominees = {}
+            FLAG = True
+            dying = {}
+            for key in suspicious[dominant]:
+                if graph.nodes[key].life == 1:  # Dying
+                    dying[key] = len(graph.nodes[key].members)
+                for point in graph.nodes[key].liberties:
+                    point = tuple(point)
+                    nominees[point] = nominees.get(point, 0) + 1
+            while len(dying) > 0:
+                key = max(dying.items(), key=operator.itemgetter(1))[0]
+                (_point,) = graph.nodes[key].liberties
+                feedback = game.add_point(_point, dominant)
+                if not feedback:  # Invalid move
+                    del dying[_point]
+                elif feedback[0] == 'combine':
+                    for removed in feedback[1][0: -1]:
+                        if removed in suspicious[-dominant]:
+                            suspicious[-dominant].remove(removed)
+                            suspicious[-dominant].add(feedback[1][-1])
+                    FLAG = False
+                    cnt += 1
+                    break  # Success
+                else:
+                    FLAG = False
+                    cnt += 1
+                    break  # Success
+            while len(nominees) > 0 and FLAG:
+                _point = max(nominees.items(), key=operator.itemgetter(1))[0]
+                feedback = game.add_point(_point, dominant)
+                if not feedback:  # Invalid move
+                    del nominees[_point]
+                elif feedback[0] == 'combine':
+                    for removed in feedback[1][0: -1]:
+                        if removed in suspicious[-dominant]:
+                            suspicious[-dominant].remove(removed)
+                            suspicious[-dominant].add(feedback[1][-1])
+                    cnt += 1
+                    break
+                else:
+                    cnt += 1
+                    break  # Success
+            # Check if exists
+            new_removed = []
+            for key in suspicious[dominant]:
+                if key not in graph.nodes:
+                    _gonna_delete.append(key)
+                    new_removed.append(key)
+            for key in new_removed:
+                suspicious[dominant].remove(key)
+            # Defense
+            # Clean dying
+            FLAG = True
+            dying = {}
+            for key in graph.nodes:
+                if graph.nodes[key].life == 1 and graph.nodes[key].color == dominant:  # Dying
+                    dying[key] = len(graph.nodes[key].members)
+            while len(dying) > 0:
+                key = max(dying.items(), key=operator.itemgetter(1))[0]
+                (_point,) = graph.nodes[key].liberties
+                feedback = game.add_point(_point, -dominant)
+                if not feedback:  # Invalid move
+                    del dying[key]
+                elif feedback[0] == 'combine':
+                    for removed in feedback[1][0: -1]:
+                        if removed in suspicious[dominant]:
+                            suspicious[dominant].remove(removed)
+                            suspicious[dominant].add(feedback[1][-1])
+                    cnt += 1
+                    FLAG = False
+                    break
+                else:
+                    FLAG = False
+                    cnt += 1
+                    break  # Success
+
+            lifes = {key: graph.nodes[key].life for key in suspicious[dominant]}
+            while len(lifes) > 0 and FLAG:
+                key = min(lifes.items(), key=operator.itemgetter(1))[0]
+                nominees = {}
+                for _point in graph.nodes[key].liberties:
+                    predict = game.get_liberties(_point)
+                    already = [i for i in predict[1] if i in graph.nodes[key].liberties]
+                    extend_life = predict[0] - 1 - len(already)
+                    nominees[_point] = extend_life
+                while len(nominees) > 0:
+                    best = max(nominees.items(), key=operator.itemgetter(1))
+                    if best[1] > 0:
+                        feedback = game.add_point(best[0], -dominant)
+                        if not feedback:  # Invalid move
+                            del nominees[best[0]]
+                        elif feedback[0] == 'combine':
+                            for removed in feedback[1][0: -1]:
+                                if removed in suspicious[dominant]:
+                                    suspicious[dominant].remove(removed)
+                                    suspicious[dominant].add(feedback[1][-1])
+                            FLAG = False
+                            cnt += 1
+                            break
+                        else:
+                            FLAG = False
+                            cnt += 1
+                            break  # Success
+                    else:
+                        break
+                if FLAG:
+                    del lifes[key]
+
+            _suspicious, size = game.remove_dead(color=-dominant)
+            suspicious = {1: set(), -1: set()}
+            for key in _suspicious:
+                if graph.nodes[key].color == 1:  # Black group
+                    suspicious[-1].add(key)
+                elif graph.nodes[key].color == -1:  # White group
+                    suspicious[1].add(key)
+
+            _max -= 1
+            if len(suspicious[dominant]) == 0:
+                dominant = -dominant
+            if cnt == 0:
+                break
+        # Recovery
+        return _gonna_delete

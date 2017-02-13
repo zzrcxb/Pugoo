@@ -1,3 +1,6 @@
+from copy import deepcopy
+
+
 class Group():
     def __init__(self, name, members, color):
         self.name = name
@@ -13,12 +16,12 @@ class Group():
         self.life = -1
 
     def __deepcopy__(self, memodict={}):
-        g = Group(self.name, set(tuple(self.members)), self.color)
+        g = Group(self.name, deepcopy(self.members), self.color)
         g.protected = self.protected
         g.attention = self.attention
         g.border = self.border
         g.lines = self.lines
-        g.liberties = self.liberties[:]
+        g.liberties = set(tuple(self.liberties))
         return g
 
     def combine(self, other):

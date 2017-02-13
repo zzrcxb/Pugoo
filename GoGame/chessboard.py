@@ -142,7 +142,7 @@ class ChessBoard:
         i = 0
         x0 = self.cross[0][0]
         y0 = self.cross[1][0]
-        while i <= self.linenum:
+        while i < self.linenum:
             self.drawline(i, False)
             self.drawline(i, True)
             self.grids.create_text(x0 - 15, self.cross[1][i], text=str(i), fill='black')

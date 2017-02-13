@@ -94,10 +94,10 @@ def count_one_eye(window, adj, x, y, enclosed, min):
     return
 
 
-def circle_analysis(graph, linenum):
-    nodes = graph.nodes
-    arcs = graph.arcs
-    arc_num = graph.arc_num
+def circle_analysis(_graph, linenum):
+    nodes = _graph.nodes
+    arcs = _graph.arcs
+    arc_num = _graph.arc_num
     circles = Circles()
     # Internal circles
     for node_key in nodes:
@@ -114,7 +114,8 @@ def circle_analysis(graph, linenum):
         if nodes[_key].border:
             nodes[_key].lines += 1
     # Set copy
-    graph = deepcopy(graph)
+    graph = deepcopy(_graph)
+
     # Out circles
     while 1:
         _gonna_remove = []
@@ -122,9 +123,7 @@ def circle_analysis(graph, linenum):
             if graph.nodes[_key].lines <= 1:
                 graph.nodes[_key].lines -= 1
                 for arc_key in graph.arcs[_key]:
-                    if arc_key == 128:
-                        print(_key)
-                    # graph.nodes[arc_key].lines -= 1
+                    graph.nodes[arc_key].lines -= 1
                 _gonna_remove.append(_key)
         if len(_gonna_remove) == 0:
             break
