@@ -1,2 +1,15 @@
-TRAINING_SET_PATH = # Your training set path
-RAW_DATA_PATH = # Your raw data path
+
+# If you need to use data management function, please uncomment following parameters
+# TRAINING_SET_PATH =  # Your training set path
+# RAW_DATA_PATH =  # Your raw data path
+# DOWNLOAD_PATH =  # Download path
+# ROOT_PATH =  # Your root folder path
+# TMP_PATH =  # Path to store temp files
+# DB_DOMAIN =  # Your server's domain
+# DB_PASSWD =  # Your password
+# DB_USER =  # Your username
+# DB_PORT =  # Your database port
+# DB_NAME =  # Your database name
+
+RESIGN = 400
+GUI = # True or False, if GUI equals true, program will show GUI but become slower.
