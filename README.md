@@ -24,19 +24,19 @@ Open terminal, and type<br>
 
 # Screenshots
 ## Final game
-<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/blank.png" width="450" height="450">
+<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/blank.png" width="450" height="450"></br>
 
 ## Mark groups
-<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/groups.png" width="450" height="450">
+<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/groups.png" width="450" height="450"></br>
 The number on the piece represents group ID.
 
 ## Circle analysis
-<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/circle_analysis.png" width="450" height="450">
+<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/circle_analysis.png" width="450" height="450"></br>
 Green half-crosses represent points enclosed by white, and red half-crosses represent points enclosed by black.
 
 ## Remove dead
-<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/remove_dead.png" width="900" height="450">
+<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/remove_dead.png" width="900" height="450"></br>
 Before removing (left), and after removing (right).
 
 ## Scoring
-<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/score.png" width="450" height="450">
+<img src="https://github.com/zzrcxb/sd_pics/blob/master/pugoo/score.png" width="450" height="450"></br>
