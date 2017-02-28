@@ -1,5 +1,5 @@
 # Pugoo(Beta)
-This is an universal program for Go game.
+This is a universal program for Go game.
 ## Dependencies
 
 You need following python3 libraries to run Pugoo, and you can download Python3 from [here](https://www.python.org/downloads/)<br>
